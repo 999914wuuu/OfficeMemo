@@ -221,6 +221,18 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .item.editing > .field{flex:1 1 100%}
 .item.editing > textarea.field{min-height:90px}
 .pfoot #doneTog{margin-right:auto}
+.wlbox{flex:1 1 100%;display:flex;flex-direction:column;gap:8px;border-top:1px dashed var(--line);padding-top:10px;margin-top:2px}
+.wlbox .wlr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.wlbox .wlr > span{font-size:12px;color:var(--muted);min-width:4.5em}
+.wlbox .seg{margin:0;flex:1 1 auto}
+.wlbox input[type=number]{width:6em;flex:0 0 auto}
+.wlbox select.field{flex:1 1 10em}
+.tagbox{display:flex;flex-wrap:wrap;gap:5px;flex:1 1 0;min-width:0}
+.tagbox button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--muted);min-height:28px}
+.tagbox button[aria-pressed="true"]{background:var(--soft);color:var(--accent);border-color:transparent}
+.tagbox input{width:7em;min-height:28px;border:1px dashed var(--line);border-radius:999px;padding:0 10px;background:transparent;font-size:12px}
+.wlpill{border:none;border-radius:999px;font-size:11px;padding:2px 8px;white-space:nowrap;flex:0 0 auto;margin-top:-1px;background:var(--soft);color:var(--accent)}
+.wlpill.warn{background:color-mix(in srgb,#C0392B 14%,transparent);color:#C0392B}
 .pfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
 
 /* calendar */
@@ -719,7 +731,7 @@ const pad=n=>String(n).padStart(2,'0');
 const dayKey=(d=new Date())=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const keyToDate=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
 const shortDay=k=>{const d=keyToDate(k);return`${d.getMonth()+1}/${d.getDate()}`};
-function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const k in attrs){const v=attrs[k];if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v===true?'':v);}kids.flat().forEach(c=>c!=null&&e.append(c));return e;}
+function h(tag,attrs={},...kids){const e=document.createElement(tag);for(const k in attrs){const v=attrs[k];if(k==='class')e.className=v;else if(k==='text')e.textContent=v;else if(k==='style')e.style.cssText=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k.startsWith('aria-')&&v!=null)e.setAttribute(k,String(v));else if(v!==false&&v!=null)e.setAttribute(k,v===true?'':v);}kids.flat().forEach(c=>c!=null&&e.append(c));return e;}
 const langOf=t=>/[\u3040-\u30ff\u31f0-\u31ff]/.test(t)?'ja':/[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/.test(t)?'ko':null;
 function T(cls,text){const e=h('span',{class:cls,text});const l=langOf(text);if(l)e.lang=l;return e}
 
@@ -795,7 +807,7 @@ function fmtDay(d,style){const ja=DF()==='ja';
 
 const isMobile=()=>matchMedia('(max-width:860px)').matches;
 let prefersDark=false;try{prefersDark=matchMedia('(prefers-color-scheme: dark)').matches}catch(e){}
-let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
+let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
 try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);Object.keys(S).forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});}}catch(e){}
 function fixTheme(t){if(!t)return t;if(!t.page&&t.card)t.page=t.card;delete t.card;
   if(t.body&&!t.zh)t.zh=t.body;delete t.body;
@@ -916,7 +928,7 @@ $('#themeApply').onclick=()=>{try{const o=JSON.parse($('#themeIO').value);
 
 /* ---------- user fonts (IndexedDB) ---------- */
 let fdbP=null;
-function fdb(){if(!fdbP)fdbP=new Promise((res,rej)=>{try{const q=indexedDB.open('desk-fonts',2);q.onupgradeneeded=()=>{const db=q.result;if(!db.objectStoreNames.contains('fonts'))db.createObjectStore('fonts',{keyPath:'id'});if(!db.objectStoreNames.contains('decks'))db.createObjectStore('decks',{keyPath:'name'});};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}catch(e){rej(e)}});return fdbP;}
+function fdb(){if(!fdbP)fdbP=new Promise((res,rej)=>{try{const q=indexedDB.open('desk-fonts',3);q.onupgradeneeded=()=>{const db=q.result;if(!db.objectStoreNames.contains('fonts'))db.createObjectStore('fonts',{keyPath:'id'});if(!db.objectStoreNames.contains('decks'))db.createObjectStore('decks',{keyPath:'name'});if(!db.objectStoreNames.contains('snaps'))db.createObjectStore('snaps',{keyPath:'at'});};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}catch(e){rej(e)}});return fdbP;}
 async function fdbDo(mode,fn,store='fonts'){const db=await fdb();return new Promise((res,rej)=>{const tx=db.transaction(store,mode),st=tx.objectStore(store);const r=fn(st);tx.oncomplete=()=>res(r&&r.result);tx.onerror=()=>rej(tx.error);});}
 async function registerFont(rec){const face=new FontFace('UF-'+rec.id,rec.data);await face.load();document.fonts.add(face);}
 async function loadUserFonts(){try{const all=await fdbDo('readonly',st=>st.getAll());for(const rec of all||[]){try{await registerFont(rec);userFonts.push({id:rec.id,name:rec.name,size:rec.size});}catch(e){}}
@@ -1188,19 +1200,23 @@ function renderSched(){const isToday=selDay===dayKey(),d=keyToDate(selDay);
     const startEdit=()=>{editId=s.id;renderSched();const f=ul.querySelector('.editing [data-k=text]');f&&f.focus();};
     ul.append(h('li',{class:'item editable'},
     h('span',{class:'time',text:timeLabel(s),title:'點一下編輯',onclick:startEdit}),(()=>{const t=T('txt',s.text);t.title='點一下編輯';t.onclick=startEdit;return t})(),
+    s.log&&s.log.on?h('span',{class:'wlpill'+(wlMissing(s).length?' warn':''),title:wlMissing(s).length?'口譯紀錄還缺：'+wlMissing(s).join('、'):'已記到口譯紀錄',text:wlMissing(s).length?'口譯・缺欄位':'口譯'}):null,
     S.gcalOn?null:h('button',{class:'gc',text:'+ Google',title:'加到 Google 行事曆',onclick:()=>openGcal(s)}),
     h('button',{class:'x','aria-label':'刪除',text:'×',onclick:()=>{S.sched=S.sched.filter(x=>x!==s);save();renderSched();renderCal();tick();}})));});}
 let editId=null;
-function editRow(s){const f={};
+function editRow(s){const f={};const wl=JSON.parse(JSON.stringify(s.log||{on:false,si:'CI',dept:'',persons:[],routine:false,kpi:[],memo:'',hours:null,hoursManual:false}));
   const inp=(k,attrs)=>f[k]=h('input',Object.assign({class:'field','data-k':k},attrs));
   const done=()=>{editId=null;renderSched();};
   const saveIt=()=>{const text=f.text.value.trim();if(!text){f.text.focus();return}
     const date=/^\d{4}-\d{2}-\d{2}$/.test(f.date.value)?f.date.value:s.date;const[t,e]=cleanTimes(f.time.value,f.end.value);
-    const moved=date!==s.date;Object.assign(s,{date,time:t,end:e,text});save();editId=null;renderSched();renderCal();tick();
+    const moved=date!==s.date;Object.assign(s,{date,time:t,end:e,text});
+    if(wl.on){wl.hours=wl.hoursManual?wl.hours:autoHours(t,e);s.log=JSON.parse(JSON.stringify(wl));}else if(s.log)s.log.on=false;
+    save();editId=null;renderSched();renderCal();tick();
     if(moved)toast(`已移到 ${shortDay(date)}`);};
   const li=h('li',{class:'item editing'},
     inp('date',{type:'date',value:s.date,'aria-label':'日期'}),h('div',{class:'trow'},(f.time=timeSel(s.time||'','開始時間','開始')),h('span',{class:'dash',text:'–'}),(f.end=timeSel(s.end||'','結束時間','結束'))),
     inp('text',{value:s.text,'aria-label':'行程內容',enterkeyhint:'done'}),
+    wlSection(s,wl,f),
     h('div',{class:'acts'},h('button',{class:'btn sm ghost',text:'取消',onclick:done}),h('button',{class:'btn sm primary',text:'儲存',onclick:saveIt})));
   li.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.target.tagName==='INPUT'){e.preventDefault();saveIt();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done();}});
   return li;}
@@ -1522,7 +1538,7 @@ function copy(text,ta,msg){const done=()=>toast(msg||'已複製');
     const ro=t.hasAttribute('readonly');t.removeAttribute('readonly');t.focus();t.select();try{document.execCommand('copy');done()}catch(e){toast('請手動複製')}if(ro)t.setAttribute('readonly','');if(tmp)t.remove();};
   if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback)}else fallback();}
 /* full backup / restore */
-const BK_KEYS=['todos','sched','memos','stickers','mine','cur','curId','filter','tab','stv','shotHour','wMobile','loc','work','cards','nmap','gmap','gcalOn','gcalFrom'];
+const BK_KEYS=['todos','sched','memos','stickers','mine','cur','curId','filter','tab','stv','shotHour','wMobile','loc','work','cards','nmap','gmap','gcalOn','gcalFrom','wlmap','wlOpts'];
 $('#bkCopy').onclick=()=>{const withImg=$('#bkImg').checked,d={};BK_KEYS.forEach(k=>d[k]=JSON.parse(JSON.stringify(S[k]??null)));
   if(!withImg){const strip=t=>{if(t&&t.img){delete t.img;if(t.pattern==='image')t.pattern='none';}};strip(d.cur);(d.mine||[]).forEach(strip);d.stickers=(d.stickers||[]).filter(x=>x.type!=='img');}
   const code=JSON.stringify({app:'officememo',v:1,at:new Date().toISOString(),data:d});$('#bkIO').value=code;copy(code,$('#bkIO'),`已複製備份（${(code.length/1024).toFixed(0)} KB）`);};
@@ -1548,7 +1564,10 @@ async function syFetch(path,opt={}){const r=await fetch(SY.url.replace(/\/+$/,''
   let j=null;try{j=await r.json()}catch(e){}return{status:r.status,ok:r.ok,j};}
 const SYNC_KEYS=BK_KEYS.filter(k=>k!=='tab'&&k!=='filter');
 function stateData(){const d={};SYNC_KEYS.forEach(k=>d[k]=S[k]??null);return d;}
-function applyRemote(rem){SYNC_KEYS.forEach(k=>{if(rem.data[k]!==undefined&&rem.data[k]!==null)S[k]=rem.data[k];});if(!S.nmap)S.nmap={};
+const itemCount=d=>d?((d.todos||[]).length+(d.memos||[]).length+(d.sched||[]).length):0;
+async function snapLocal(reason){if(!itemCount(S))return;try{const at=Date.now();await fdbDo('readwrite',st=>st.put({at,reason,n:itemCount(S),data:JSON.parse(JSON.stringify(stateData()))}),'snaps');
+  const keys=await fdbDo('readonly',st=>st.getAllKeys(),'snaps');keys.sort((a,b)=>a-b);while(keys.length>15){const k=keys.shift();await fdbDo('readwrite',st=>st.delete(k),'snaps');}}catch(e){}}
+function applyRemote(rem){snapLocal('cloud');SYNC_KEYS.forEach(k=>{if(rem.data[k]!==undefined&&rem.data[k]!==null)S[k]=rem.data[k];});if(!S.nmap)S.nmap={};
   fixTheme(S.cur);(S.mine||[]).forEach(fixTheme);if(!S.cur||!S.cur.page){S.cur={...PRESETS[0]};S.curId=PRESETS[0].id;}
   SM.at=rem.at;SM.rat=rem.at;saveSM();save(true);applyTheme();renderAll();}
 syncHook=()=>{SM.at=Date.now();saveSM();if(!syOn())return;clearTimeout(syTimer);syTimer=setTimeout(()=>syRun('push'),5000);};
@@ -1573,37 +1592,85 @@ async function syRun(mode){if(!syOn())return;if(syBusy){syAgain=true;return}syBu
   try{
     const g=await syFetch('/state');if(!g.ok)throw new Error(g.status===401?'pass':g.status===403?'origin':'net');
     const rem=g.j&&!g.j.empty&&typeof g.j.at==='number'?g.j:null;
-    const localDirty=SM.at>SM.rat;
+    let localDirty=SM.at>SM.rat,keepLocal=false;
     const cnt=d=>d?((d.todos||[]).length+(d.memos||[]).length+(d.sched||[]).length):0,localN=cnt(S),remN=rem?cnt(rem.data):0;
     // 第一次連線、這台是空的：一律用雲端的
     if(rem&&remN>0&&localN===0&&(SM.rat===0||localDirty)){applyRemote(rem);syStatus(`已從雲端載入　${hm(new Date())}`);return}
     // 雲端是空的、這台有資料：先問
-    if(rem&&remN===0&&localN>0&&rem.at>SM.rat&&!localDirty){
-      if(!confirm('雲端上的資料是空的，這台裝置上還有資料。\n按「確定」用這台的資料覆蓋雲端（建議）；按「取消」改成清空這台。')){applyRemote(rem);return}
-      SM.at=Date.now();saveSM();}
-    if(rem&&rem.at>SM.rat&&SM.rat===0&&(S.todos.length||S.memos.length||S.sched.length)){
+    if(rem&&localN>0&&remN<localN&&rem.at>SM.rat&&(remN===0||rem.at>=SM.at)){
+      if(!confirm(`雲端上的資料比這台少（雲端 ${remN} 筆、這台 ${localN} 筆）。\n按「確定」用這台的資料覆蓋雲端（建議）；按「取消」改用雲端的內容。`)){applyRemote(rem);return}
+      SM.at=Date.now();saveSM();localDirty=true;keepLocal=true;}
+    if(!keepLocal&&rem&&rem.at>SM.rat&&SM.rat===0&&(S.todos.length||S.memos.length||S.sched.length)){
       if(!confirm('雲端已經有資料了。\n按「確定」用雲端的內容取代這台裝置；按「取消」改用這台裝置的內容覆蓋雲端。')){SM.at=Date.now();SM.rat=0;saveSM();
         const left=await pushNotion();const p0=await syFetch('/state',{method:'PUT',body:JSON.stringify({at:SM.at,data:stateData(),force:true})});
         if(!p0.ok)throw new Error('net');SM.rat=SM.at;saveSM();syStatus(`已同步　${hm(new Date())}`);if(left>0)syAgain=true;return}
     }
-    if(rem&&rem.at>SM.rat){
+    if(!keepLocal&&rem&&rem.at>SM.rat){
       if(!localDirty||rem.at>=SM.at){applyRemote(rem);syStatus(`已從雲端更新　${hm(new Date())}`);
-        if(notionOps().length||gcalOps().length){const l1=await pushNotion(),l2=await pushGcal();const at=Date.now();SM.at=at;saveSM();
+        if(notionOps().length||gcalOps().length||wlOps().length){const l1=await pushNotion(),l2=await pushGcal();await pushWl();const at=Date.now();SM.at=at;saveSM();
           const p2=await syFetch('/state',{method:'PUT',body:JSON.stringify({at,data:stateData()})});if(p2.ok){SM.rat=at;saveSM();}if(l1>0||l2>0)syAgain=true;}
         return}
     }
+    if(!keepLocal&&rem&&remN>=5&&localN<remN*0.5){
+      if(!confirm(`這台的資料比雲端少很多（這台 ${localN} 筆、雲端 ${remN} 筆）。\n按「確定」用這台覆蓋雲端；按「取消」改用雲端的內容。`)){applyRemote(rem);return}
+      keepLocal=true;}
     if(localDirty||!rem){
-      const left=await pushNotion();const leftG=await pushGcal();
+      const left=await pushNotion();const leftG=await pushGcal();const leftW=await pushWl();
       const at=SM.at||Date.now();
-      let p=await syFetch('/state',{method:'PUT',body:JSON.stringify({at,data:stateData()})});
+      let p=await syFetch('/state',{method:'PUT',body:JSON.stringify({at,data:stateData(),force:keepLocal})});
       if(p.status===409){syBusy=false;return syRun('pull')}
       if(!p.ok)throw new Error(p.status===401?'pass':'net');
-      SM.rat=at;saveSM();if(left>0||leftG>0)syAgain=true;
+      SM.rat=at;saveSM();if(left>0||leftG>0||leftW>0)syAgain=true;
     }
     syStatus(`已同步　${hm(new Date())}`);syErrShown=false;
-  }catch(e){const m={pass:'通關密碼不對',origin:'這個網址沒有被 Worker 允許（檢查 ALLOWED_ORIGINS）',notion:'Notion 寫入失敗，檢查 token、資料庫 ID 和欄位名稱',gcal:'Google 日曆寫入失敗，按「測試連線」檢查設定',net:'連不上 Worker'}[e.message]||'同步失敗';
+  }catch(e){const m={pass:'通關密碼不對',origin:'這個網址沒有被 Worker 允許（檢查 ALLOWED_ORIGINS）',notion:'Notion 寫入失敗，檢查 token、資料庫 ID 和欄位名稱',gcal:'Google 日曆寫入失敗，按「測試連線」檢查設定',wl:'口譯紀錄寫入失敗，檢查 INTERP_DB_ID 和 Notion 連線',net:'連不上 Worker'}[e.message]||'同步失敗';
     syStatus(m+'，稍後會再試');if(!syErrShown){toast(m);syErrShown=true;}clearTimeout(syTimer);syTimer=setTimeout(()=>syRun('push'),60000);}
   finally{syBusy=false;if(syAgain){syAgain=false;setTimeout(()=>syRun('push'),1500);}}}
+
+
+/* ---------- Work-log (Interpreting Record) ---------- */
+function autoHours(t,e){if(!t||!e||e<=t)return null;const[a,b]=t.split(':').map(Number),[c,d]=e.split(':').map(Number);return Math.max(.5,Math.round(((c*60+d)-(a*60+b))/30)/2);}
+function wlMissing(s){const l=s.log||{},m=[];if(!l.si)m.push('SI/CI');if(!l.dept)m.push('依頼部門');if(typeof l.hours!=='number'||!(l.hours>0))m.push('時間');if(!s.text)m.push('名稱');return m;}
+function tagPicker(list,sel,onAdd){const box=h('div',{class:'tagbox'});
+  const draw=()=>{box.innerHTML='';list().forEach(n=>box.append(h('button',{type:'button','aria-pressed':sel.includes(n),text:n,onclick:()=>{const i=sel.indexOf(n);i<0?sel.push(n):sel.splice(i,1);draw();}})));
+    const add=h('input',{placeholder:'＋新增',enterkeyhint:'done'});add.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();e.stopPropagation();const v=add.value.trim();if(!v)return;onAdd(v);if(!sel.includes(v))sel.push(v);draw();}});box.append(add);};
+  draw();return box;}
+function addOpt(key,v){const o=S.wlOpts||(S.wlOpts={depts:[],persons:[],kpis:[]});o[key]=o[key]||[];if(!o[key].includes(v)){o[key].push(v);save();}}
+function wlSection(s,wl,f){const box=h('div',{class:'wlbox'});
+  const body=h('div',{style:'display:flex;flex-direction:column;gap:8px'});
+  const tog=h('label',{style:'display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer'},h('input',{type:'checkbox',checked:wl.on,style:'accent-color:var(--accent);width:17px;height:17px',onchange:e=>{wl.on=e.target.checked;body.hidden=!wl.on;if(wl.on&&!S.wlOpts.depts.length)wlLoadOpts();}}),'記到口譯紀錄');
+  body.hidden=!wl.on;
+  const seg=h('div',{class:'seg'},...['SI','CI','支援'].map(v=>h('button',{type:'button','aria-selected':wl.si===v,text:v,onclick:e=>{wl.si=v;[...seg.children].forEach(b=>b.setAttribute('aria-selected',b.textContent===v));}})));
+  const hrs=h('input',{type:'number',class:'field',step:'0.5',min:'0',value:wl.hoursManual&&typeof wl.hours==='number'?wl.hours:(autoHours(f.time&&f.time.value,f.end&&f.end.value)??(wl.hours??'')),oninput:e=>{wl.hours=e.target.value===''?null:+e.target.value;wl.hoursManual=e.target.value!=='';}});
+  const syncHrs=()=>{if(!wl.hoursManual){const v=autoHours(f.time.value,f.end.value);hrs.value=v??'';wl.hours=v;}};
+  setTimeout(()=>{f.time&&f.time.addEventListener('change',syncHrs);f.end&&f.end.addEventListener('change',syncHrs);},0);
+  const dept=h('select',{class:'field',onchange:e=>{if(e.target.value==='__new'){const v=(prompt('新增依頼部門')||'').trim();if(v){addOpt('depts',v);wl.dept=v;}fillDept();}else wl.dept=e.target.value;}});
+  const fillDept=()=>{dept.innerHTML='';dept.append(h('option',{value:'',text:'選擇部門'}));const L=[...new Set([...(S.wlOpts.depts||[]),wl.dept].filter(Boolean))];L.forEach(n=>dept.append(h('option',{value:n,text:n})));dept.append(h('option',{value:'__new',text:'＋ 新增部門…'}));dept.value=wl.dept||'';};fillDept();
+  const memo=h('textarea',{class:'field',placeholder:'Memo（選填）',style:'min-height:60px'});memo.value=wl.memo||'';memo.oninput=()=>{wl.memo=memo.value;};memo.addEventListener('keydown',e=>e.stopPropagation());
+  body.append(
+    h('div',{class:'wlr'},h('span',{text:'SI/CI'}),seg),
+    h('div',{class:'wlr'},h('span',{text:'時間'}),hrs,h('small',{class:'hint',style:'margin:0',text:'小時，依開始結束時間自動計算，可修改'})),
+    h('div',{class:'wlr'},h('span',{text:'依頼部門'}),dept),
+    h('div',{class:'wlr'},h('span',{text:'駐在員'}),tagPicker(()=>[...new Set([...(S.wlOpts.persons||[]),...wl.persons])],wl.persons,v=>addOpt('persons',v))),
+    h('div',{class:'wlr'},h('span',{text:'KPI'}),tagPicker(()=>[...new Set([...(S.wlOpts.kpis||[]),...wl.kpi])],wl.kpi,v=>addOpt('kpis',v))),
+    h('label',{class:'wlr',style:'cursor:pointer'},h('span',{text:'Routine'}),h('input',{type:'checkbox',checked:wl.routine,style:'accent-color:var(--accent);width:17px;height:17px',onchange:e=>{wl.routine=e.target.checked;}}),h('small',{class:'hint',style:'margin:0',text:'固定會議'})),
+    memo);
+  box.append(tog,body);return box;}
+let wlLoading=false;
+async function wlLoadOpts(){if(!syOn()||wlLoading)return;wlLoading=true;try{const r=await syFetch('/wl/schema');if(r.ok&&r.j&&r.j.ok){const o=S.wlOpts||(S.wlOpts={});
+  ['depts','persons','kpis'].forEach(k=>{o[k]=[...new Set([...(o[k]||[]),...(r.j[k]||[])])];});save(true);if(editId)renderSched();}}catch(e){}wlLoading=false;}
+const wlHash=s=>JSON.stringify([s.text,s.date,s.time||'',s.end||'',s.log]);
+function wlRec(s){const l=s.log;return{name:s.text,date:s.date,start:s.time||'',end:s.end||'',hours:l.hours,si:l.si,dept:l.dept,persons:l.persons||[],routine:!!l.routine,kpi:l.kpi||[],memo:l.memo||''};}
+function wlOps(){const ops=[],seen=new Set(),wm=S.wlmap||(S.wlmap={});
+  S.sched.forEach(s=>{const want=s.log&&s.log.on&&!wlMissing(s).length,m=wm[s.id];
+    if(want){seen.add(s.id);const hh=wlHash(s);if(!m)ops.push({id:s.id,action:'create',rec:wlRec(s),h:hh});else if(m.h!==hh)ops.push({id:s.id,action:'update',pageId:m.p,rec:wlRec(s),h:hh});}});
+  Object.keys(wm).forEach(id=>{if(!seen.has(id)){const s=S.sched.find(x=>x.id===id);if(!s||!(s.log&&s.log.on))ops.push({id,action:'archive',pageId:wm[id].p});}});return ops;}
+async function pushWl(){const ops=wlOps();if(!ops.length)return 0;const batch=ops.slice(0,20);let tz='Asia/Taipei';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||tz}catch(e){}
+  const r=await syFetch('/wl',{method:'POST',body:JSON.stringify({tz,ops:batch.map(({h,...o})=>o)})});
+  if(!r.ok)throw new Error(r.status===401?'pass':'wl');
+  let fail=0;(r.j.results||[]).forEach(res=>{const op=batch.find(o=>o.id===res.id);if(!op)return;if(!res.ok){fail++;return}
+    if(op.action==='create')S.wlmap[op.id]={p:res.pageId,h:op.h};else if(op.action==='update'&&S.wlmap[op.id])S.wlmap[op.id].h=op.h;else if(op.action==='archive')delete S.wlmap[op.id];});
+  save(true);if(fail)throw new Error('wl');return ops.length-batch.length;}
 
 /* ---------- Google Calendar sync (through the worker) ---------- */
 const gHash=s=>[s.date,s.time||'',s.end||'',s.text].join('|');
@@ -1631,7 +1698,11 @@ $('#gcalTest').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');r
 
 $('#syHist').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');return}const box=$('#histList');box.innerHTML='<p class="hint">讀取中…</p>';
   try{const r=await syFetch('/hist');if(!r.ok)throw 0;box.innerHTML='';const list=(r.j&&r.j.list)||[];
-    if(!list.length){box.innerHTML='<p class="hint">還沒有歷史版本，Worker 更新後才會開始保留。</p>';return}
+    let snaps=[];try{snaps=(await fdbDo('readonly',st=>st.getAll(),'snaps'))||[];}catch(e){}
+    snaps.sort((a,b)=>b.at-a.at).forEach(v=>{const d=new Date(v.at);box.append(h('div',{class:'pick'},h('span',{style:'flex:1',text:`本機 ${d.getMonth()+1}/${d.getDate()} ${hm(d)}　共 ${v.n} 筆（被雲端取代前）`}),
+      h('button',{class:'btn sm',text:'還原',onclick:()=>{if(!confirm(`用這台 ${d.getMonth()+1}/${d.getDate()} ${hm(d)} 的本機快照取代目前內容？`))return;
+        SYNC_KEYS.forEach(k=>{if(v.data[k]!==undefined&&v.data[k]!==null)S[k]=v.data[k];});fixTheme(S.cur);save();applyTheme();renderAll();$('#dlgExport').close();toast('已還原，會自動同步回雲端');}})));});
+    if(!list.length&&!snaps.length){box.innerHTML='<p class="hint">還沒有歷史版本，Worker 更新後才會開始保留。</p>';return}
     list.forEach(v=>{const d=new Date(v.at);box.append(h('div',{class:'pick'},h('span',{style:'flex:1',text:`${d.getMonth()+1}/${d.getDate()} ${hm(d)}　待辦 ${v.todos}・筆記 ${v.memos}・行程 ${v.sched}`}),
       h('button',{class:'btn sm',text:'還原',onclick:async()=>{if(!confirm(`用 ${d.getMonth()+1}/${d.getDate()} ${hm(d)} 的版本取代目前所有內容？`))return;
         const g=await syFetch('/hist/'+encodeURIComponent(v.key));if(!g.ok||!g.j||!g.j.data){toast('讀不到這個版本');return}
@@ -1639,7 +1710,7 @@ $('#syHist').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');ret
         save();applyTheme();renderAll();$('#dlgExport').close();toast('已還原，會自動同步回雲端');}})));});}
   catch(e){box.innerHTML='<p class="hint">讀不到歷史版本，確認 Worker 已更新成新版。</p>';}};
 function syFill(){$('#gcalOn').checked=!!S.gcalOn;$('#syUrl').value=SY.url||'';$('#syPass').value=SY.pass||'';syStatus(syOn()?(syLast||'已設定，等待同步'):'尚未連線');}
-$('#sySave').onclick=()=>{const url=$('#syUrl').value.trim(),pass=$('#syPass').value;if(!/^https:\/\//.test(url)||!pass){toast('請填 https 開頭的 Worker 網址和通關密碼');return}
+$('#sySave').onclick=()=>{setTimeout(wlLoadOpts,2000);const url=$('#syUrl').value.trim(),pass=$('#syPass').value;if(!/^https:\/\//.test(url)||!pass){toast('請填 https 開頭的 Worker 網址和通關密碼');return}
   SY={url,pass};try{localStorage.setItem(SY_KEY,JSON.stringify(SY))}catch(e){}syRun('pull');};
 $('#syNow').onclick=()=>{if(!syOn()){toast('先填好 Worker 網址和通關密碼');return}syRun('push');};
 $('#syOff').onclick=()=>{if(!confirm('停用雲端同步？雲端和 Notion 上的資料不會被刪除。'))return;SY={};try{localStorage.removeItem(SY_KEY)}catch(e){}syFill();};
@@ -1655,7 +1726,7 @@ $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()
 function renderAll(){renderDate();renderTabs();renderTodos();renderSched();renderCal();renderMemos();renderWidgets();renderStickers();tick();}
 applyTheme();
 if(S.stv!==2){const st=$('#stage');S.stickers.forEach(x=>{x.x+=st.offsetLeft;x.y+=st.offsetTop});S.stv=2;save(true);}
-renderAll();loadUserFonts();fetchWx(false);if(syOn())setTimeout(()=>syRun('pull'),800);setTimeout(loadDeck,1200);
+renderAll();loadUserFonts();fetchWx(false);if(syOn())setTimeout(()=>syRun('pull'),800);setTimeout(loadDeck,1200);setTimeout(wlLoadOpts,2500);
 let lastMin=-1;setInterval(()=>{const m=new Date().getMinutes();if(m!==lastMin){lastMin=m;renderWidgets();}if(Date.now()-((S.wx&&S.wx.at)||0)>30*60e3&&wxState!=='loading')fetchWx(false);},5000);
 matchMedia('(min-width:561px)').addEventListener('change',renderWidgets);
 let lastDay=dayKey();
