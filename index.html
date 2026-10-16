@@ -686,6 +686,8 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
     </div>
     <div class="row"><button class="btn primary sm" id="sySave">連線</button><button class="btn sm" id="syNow">立即同步</button><button class="btn ghost sm" id="syOff">停用</button></div>
     <div class="status" id="syStatus" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:6px"><button class="btn ghost sm" id="syHist">雲端歷史版本</button></div>
+    <div id="histList"></div>
     <div class="row" style="margin-top:12px">
       <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="gcalOn" style="accent-color:var(--accent);width:17px;height:17px">行程同步到 Google 日曆</label>
       <button class="btn ghost sm" id="gcalTest">測試連線</button>
@@ -983,7 +985,7 @@ let wxState='idle';
 async function fetchWx(force){const L=loc();if(!force&&S.wx&&S.wx.loc===S.loc&&Date.now()-S.wx.at<30*60e3)return;wxState='loading';renderWidgets();
   try{const u=`https://api.open-meteo.com/v1/forecast?latitude=${L[1]}&longitude=${L[2]}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1`;
     const r=await fetch(u);if(!r.ok)throw 0;const j=await r.json();
-    S.wx={loc:S.loc,at:Date.now(),t:j.current.temperature_2m,code:j.current.weather_code,hi:j.daily.temperature_2m_max[0],lo:j.daily.temperature_2m_min[0],pop:j.daily.precipitation_probability_max[0]};save();wxState='ok';}
+    S.wx={loc:S.loc,at:Date.now(),t:j.current.temperature_2m,code:j.current.weather_code,hi:j.daily.temperature_2m_max[0],lo:j.daily.temperature_2m_min[0],pop:j.daily.precipitation_probability_max[0]};save(true);wxState='ok';}
   catch(e){wxState='err';}renderWidgets();}
 const TAROT=(()=>{const maj=[['The Fool','愚者'],['The Magician','魔術師'],['The High Priestess','女祭司'],['The Empress','皇后'],['The Emperor','皇帝'],['The Hierophant','教皇'],['The Lovers','戀人'],['The Chariot','戰車'],['Strength','力量'],['The Hermit','隱者'],['Wheel of Fortune','命運之輪'],['Justice','正義'],['The Hanged Man','吊人'],['Death','死神'],['Temperance','節制'],['The Devil','惡魔'],['The Tower','高塔'],['The Star','星星'],['The Moon','月亮'],['The Sun','太陽'],['Judgement','審判'],['The World','世界']];
   const R=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI'];
@@ -1525,6 +1527,7 @@ $('#bkCopy').onclick=()=>{const withImg=$('#bkImg').checked,d={};BK_KEYS.forEach
   if(!withImg){const strip=t=>{if(t&&t.img){delete t.img;if(t.pattern==='image')t.pattern='none';}};strip(d.cur);(d.mine||[]).forEach(strip);d.stickers=(d.stickers||[]).filter(x=>x.type!=='img');}
   const code=JSON.stringify({app:'officememo',v:1,at:new Date().toISOString(),data:d});$('#bkIO').value=code;copy(code,$('#bkIO'),`已複製備份（${(code.length/1024).toFixed(0)} KB）`);};
 $('#bkRestore').onclick=()=>{let o;try{o=JSON.parse($('#bkIO').value.trim());}catch(e){toast('備份代碼格式不對');return}
+  if(o&&!o.app&&typeof o.at==='number'&&o.data)o={app:'officememo',at:new Date(o.at).toISOString(),data:o.data};
   if(!o||!['desk','officememo'].includes(o.app)||!o.data||!Array.isArray(o.data.todos)){toast('這不是 OfficeMemo 的備份代碼');return}
   const when=o.at?new Date(o.at):null;
   if(!confirm(`要用${when?` ${when.getMonth()+1}/${when.getDate()} ${pad(when.getHours())}:${pad(when.getMinutes())} 的`:''}備份取代目前所有內容嗎？`))return;
@@ -1571,6 +1574,13 @@ async function syRun(mode){if(!syOn())return;if(syBusy){syAgain=true;return}syBu
     const g=await syFetch('/state');if(!g.ok)throw new Error(g.status===401?'pass':g.status===403?'origin':'net');
     const rem=g.j&&!g.j.empty&&typeof g.j.at==='number'?g.j:null;
     const localDirty=SM.at>SM.rat;
+    const cnt=d=>d?((d.todos||[]).length+(d.memos||[]).length+(d.sched||[]).length):0,localN=cnt(S),remN=rem?cnt(rem.data):0;
+    // 第一次連線、這台是空的：一律用雲端的
+    if(rem&&remN>0&&localN===0&&(SM.rat===0||localDirty)){applyRemote(rem);syStatus(`已從雲端載入　${hm(new Date())}`);return}
+    // 雲端是空的、這台有資料：先問
+    if(rem&&remN===0&&localN>0&&rem.at>SM.rat&&!localDirty){
+      if(!confirm('雲端上的資料是空的，這台裝置上還有資料。\n按「確定」用這台的資料覆蓋雲端（建議）；按「取消」改成清空這台。')){applyRemote(rem);return}
+      SM.at=Date.now();saveSM();}
     if(rem&&rem.at>SM.rat&&SM.rat===0&&(S.todos.length||S.memos.length||S.sched.length)){
       if(!confirm('雲端已經有資料了。\n按「確定」用雲端的內容取代這台裝置；按「取消」改用這台裝置的內容覆蓋雲端。')){SM.at=Date.now();SM.rat=0;saveSM();
         const left=await pushNotion();const p0=await syFetch('/state',{method:'PUT',body:JSON.stringify({at:SM.at,data:stateData(),force:true})});
@@ -1619,6 +1629,15 @@ $('#gcalOn').onchange=e=>{if(e.target.checked){const from=(()=>{const d=new Date
 $('#gcalTest').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');return}const h=$('#gcalHint');h.textContent='測試中…';
   try{const r=await syFetch('/gcal/test');h.textContent=r.ok&&r.j&&r.j.ok?'連線成功，Worker 可以寫入這個 Google 日曆。':`連線失敗：${(r.j&&r.j.error)||r.status}`;}catch(e){h.textContent='連不上 Worker';}};
 
+$('#syHist').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');return}const box=$('#histList');box.innerHTML='<p class="hint">讀取中…</p>';
+  try{const r=await syFetch('/hist');if(!r.ok)throw 0;box.innerHTML='';const list=(r.j&&r.j.list)||[];
+    if(!list.length){box.innerHTML='<p class="hint">還沒有歷史版本，Worker 更新後才會開始保留。</p>';return}
+    list.forEach(v=>{const d=new Date(v.at);box.append(h('div',{class:'pick'},h('span',{style:'flex:1',text:`${d.getMonth()+1}/${d.getDate()} ${hm(d)}　待辦 ${v.todos}・筆記 ${v.memos}・行程 ${v.sched}`}),
+      h('button',{class:'btn sm',text:'還原',onclick:async()=>{if(!confirm(`用 ${d.getMonth()+1}/${d.getDate()} ${hm(d)} 的版本取代目前所有內容？`))return;
+        const g=await syFetch('/hist/'+encodeURIComponent(v.key));if(!g.ok||!g.j||!g.j.data){toast('讀不到這個版本');return}
+        SYNC_KEYS.forEach(k=>{if(g.j.data[k]!==undefined&&g.j.data[k]!==null)S[k]=g.j.data[k];});fixTheme(S.cur);(S.mine||[]).forEach(fixTheme);
+        save();applyTheme();renderAll();$('#dlgExport').close();toast('已還原，會自動同步回雲端');}})));});}
+  catch(e){box.innerHTML='<p class="hint">讀不到歷史版本，確認 Worker 已更新成新版。</p>';}};
 function syFill(){$('#gcalOn').checked=!!S.gcalOn;$('#syUrl').value=SY.url||'';$('#syPass').value=SY.pass||'';syStatus(syOn()?(syLast||'已設定，等待同步'):'尚未連線');}
 $('#sySave').onclick=()=>{const url=$('#syUrl').value.trim(),pass=$('#syPass').value;if(!/^https:\/\//.test(url)||!pass){toast('請填 https 開頭的 Worker 網址和通關密碼');return}
   SY={url,pass};try{localStorage.setItem(SY_KEY,JSON.stringify(SY))}catch(e){}syRun('pull');};
@@ -1635,7 +1654,7 @@ $$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()
 
 function renderAll(){renderDate();renderTabs();renderTodos();renderSched();renderCal();renderMemos();renderWidgets();renderStickers();tick();}
 applyTheme();
-if(S.stv!==2){const st=$('#stage');S.stickers.forEach(x=>{x.x+=st.offsetLeft;x.y+=st.offsetTop});S.stv=2;save();}
+if(S.stv!==2){const st=$('#stage');S.stickers.forEach(x=>{x.x+=st.offsetLeft;x.y+=st.offsetTop});S.stv=2;save(true);}
 renderAll();loadUserFonts();fetchWx(false);if(syOn())setTimeout(()=>syRun('pull'),800);setTimeout(loadDeck,1200);
 let lastMin=-1;setInterval(()=>{const m=new Date().getMinutes();if(m!==lastMin){lastMin=m;renderWidgets();}if(Date.now()-((S.wx&&S.wx.at)||0)>30*60e3&&wxState!=='loading')fetchWx(false);},5000);
 matchMedia('(min-width:561px)').addEventListener('change',renderWidgets);
