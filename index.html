@@ -209,6 +209,11 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .x:hover{background:var(--soft);color:var(--ink)}
 .empty{color:var(--muted);font-size:14px;min-height:var(--row);display:flex;align-items:center;padding:0 2px;border-bottom:1px solid var(--line)}
 .add.wrapline{flex-wrap:wrap}
+.add.oneline{flex-wrap:nowrap}
+.add.oneline .trow{flex:0 0 auto;gap:4px}
+.add.oneline .trow select.tsel{flex:0 0 auto;min-width:0;width:5.4em;padding:0 4px}
+.add.oneline #schedIn{flex:1 1 6em}
+@media (max-width:520px){.add.oneline{flex-wrap:wrap}.add.oneline .trow{flex:1 1 100%}.add.oneline .trow select.tsel{flex:1 1 0;width:auto}}
 .trow{display:flex;align-items:center;gap:6px;flex:1 1 100%;min-width:0}
 .trow .field{flex:1 1 0;min-width:0;padding:0 8px}
 .trow input[type=time],.trow select.tsel{flex:1 1 7.6em;min-width:7.6em}
@@ -438,7 +443,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
         <div class="sched">
           <div class="ph"><h2 class="pt s">Schedule</h2><button class="btn sm" id="importBtn">匯入</button></div>
           <div class="psub"><span id="schedDay" class="dfont"></span><a id="backToday" hidden>回到今天</a></div>
-          <div class="add wrapline">
+          <div class="add oneline">
             <div class="trow">
               <select class="field tsel" id="schedTime" aria-label="開始時間" title="開始時間"></select>
               <span class="dash">–</span>
@@ -504,7 +509,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
       </nav>
     </div>
   </div>
-  <div class="verline">OfficeMemo v2.0</div>
+  <div class="verline">OfficeMemo v2.2</div>
   <div class="stickers" id="stickers"></div>
 </div>
 
@@ -519,7 +524,8 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
       <button class="btn sm" id="openTarot">選牌</button>
       <button class="btn ghost sm" id="openDeck">我的卡面</button>
     </div>
-    <p class="hint">抽到或選好的牌會變成有白邊的卡片貼紙，可以拖曳、縮放，點一下後用「⇅」切換正逆位。</p>
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;margin-top:10px;cursor:pointer"><input type="checkbox" id="dailyOn" style="accent-color:var(--accent);width:17px;height:17px">每天出現「今日卡牌」</label>
+    <p class="hint">今日卡牌是一張塔羅、一張雷諾曼，每天自動出現在固定位置：點塔羅可以選牌，點雷諾曼直接抽一張。上面的按鈕則是另外貼一張卡片貼紙，例如想提醒自己的時候。</p>
   </div>
   <div class="sec">
     <h4>對話框</h4>
@@ -679,6 +685,24 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
   </div>
 </div></dialog>
 
+<!-- Daily card -->
+<dialog id="dlgDaily"><div class="dlg">
+  <div class="dlg-h"><h3>Today's card</h3><button class="btn ghost sm" data-close>關閉</button></div>
+  <div class="sec" id="dailyLenSec">
+    <h4>今日雷諾曼</h4>
+    <div class="row" style="margin-top:0"><button class="btn primary sm" id="dailyLen">重抽一張</button><button class="btn ghost sm" id="dailyLenClear">清除</button></div>
+  </div>
+  <div class="sec" id="dailyTarotSec">
+    <h4>選塔羅（早上抽到的牌）</h4>
+    <div class="cardsel">
+      <select class="field" id="dailyTarot"></select>
+      <div class="seg" id="dailyRev" style="margin:0"><button data-rev="0" aria-selected="true">正位</button><button data-rev="1" aria-selected="false">逆位</button></div>
+      <div class="row" style="margin-top:0"><button class="btn primary sm" id="dailyTarotOk">放上去</button><button class="btn ghost sm" id="dailyClear">清除</button></div>
+    </div>
+  </div>
+  <p class="hint">每天會自動出現一張塔羅、一張雷諾曼，拖到你想要的位置後就會記住，之後每天都出現在那裡。隔天會換回待抽的狀態。</p>
+</div></dialog>
+
 <!-- My Lenormand deck -->
 <dialog id="dlgDeck"><div class="dlg">
   <div class="dlg-h"><h3>My deck</h3><button class="btn ghost sm" data-close>關閉</button></div>
@@ -827,7 +851,7 @@ function fmtDay(d,style){const ja=DF()==='ja';
 
 const isMobile=()=>matchMedia('(max-width:860px)').matches;
 let prefersDark=false;try{prefersDark=matchMedia('(prefers-color-scheme: dark)').matches}catch(e){}
-let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
+let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},dailyOn:true,wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
 try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);Object.keys(S).forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});}}catch(e){}
 function fixTheme(t){if(!t)return t;if(!t.page&&t.card)t.page=t.card;delete t.card;
   if(t.body&&!t.zh)t.zh=t.body;delete t.body;
@@ -840,7 +864,7 @@ S.sched.forEach(s=>{if(!s.date)s.date=dayKey()});
 if(!S.workFix){if(S.work&&S.work.end==='18:00')S.work.end='17:30';S.workFix=1;}
 S.stickers.forEach(s=>{if(!s.pg)s.pg=(isMobile()?'m:':'d:')+(isMobile()?S.tab:(S.tab==='today'?'todo':S.tab))});
 const curPg=()=>isMobile()?'m:'+S.tab:'d:'+(S.tab==='today'?'todo':S.tab);
-const stickerVisible=s=>isMobile()?s.pg==='m:'+S.tab:(s.pg==='d:left'||s.pg===curPg());
+const stickerVisible=s=>{if(s.type==='daily'){if(!S.dailyOn||!s.kind)return false;return isMobile()?(s.id.endsWith('-m')&&S.tab==='today'):s.id.endsWith('-d');}return isMobile()?s.pg==='m:'+S.tab:(s.pg==='d:left'||s.pg===curPg());};
 let selDay=dayKey(),calY=new Date().getFullYear(),calM=new Date().getMonth();
 let syncHook=null;
 function save(quiet){try{localStorage.setItem(KEY,JSON.stringify(S));if(!quiet&&syncHook)syncHook();return true}catch(e){toast('瀏覽器空間滿了，刪掉幾張圖片貼紙或主題再試');return false}}
@@ -1009,8 +1033,8 @@ const ICON_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 function moonSVG(e){const r=15,c=Math.cos(e*RAD),rx=Math.abs(c)*r,wax=e<180;
   const lit=wax?`M0,${-r} A${r},${r} 0 0,1 0,${r} A${rx},${r} 0 0,${c>0?0:1} 0,${-r}Z`:`M0,${-r} A${r},${r} 0 0,0 0,${r} A${rx},${r} 0 0,${c>0?1:0} 0,${-r}Z`;
   return `<svg class="moon" viewBox="-17 -17 34 34" aria-hidden="true"><circle r="${r}" fill="color-mix(in srgb,var(--ink) 30%,transparent)"/><path d="${lit}" fill="#F3EBD3"/><circle r="${r}" fill="none" stroke="color-mix(in srgb,var(--ink) 30%,transparent)" stroke-width="1"/></svg>`;}
-function phaseName(e){const ill=(1-Math.cos(e*RAD))/2;if(ill<.03)return'新月';if(ill>.97)return'滿月';if(Math.abs(e-90)<7)return'上弦月';if(Math.abs(e-270)<7)return'下弦月';
-  return e<180?(ill<.5?'眉月':'盈凸月'):(ill<.5?'殘月':'虧凸月');}
+function phaseName(e){const ill=(1-Math.cos(e*RAD))/2;if(ill<.03)return'New Moon';if(ill>.97)return'Full Moon';if(Math.abs(e-90)<7)return'First Quarter';if(Math.abs(e-270)<7)return'Third Quarter';
+  return e<180?(ill<.5?'Waxing Crescent':'Waxing Gibbous'):(ill<.5?'Waning Crescent':'Waning Gibbous');}
 const WXT={0:['☀︎','晴'],1:['🌤︎','大致晴朗'],2:['⛅︎','局部多雲'],3:['☁︎','陰'],45:['≋','霧'],48:['≋','霧'],51:['☂︎','毛毛雨'],53:['☂︎','毛毛雨'],55:['☂︎','毛毛雨'],56:['☂︎','凍毛毛雨'],57:['☂︎','凍毛毛雨'],
   61:['☂︎','小雨'],63:['☂︎','雨'],65:['☂︎','大雨'],66:['☂︎','凍雨'],67:['☂︎','凍雨'],71:['❄︎','小雪'],73:['❄︎','雪'],75:['❄︎','大雪'],77:['❄︎','冰霰'],80:['☂︎','陣雨'],81:['☂︎','陣雨'],82:['☂︎','強陣雨'],85:['❄︎','陣雪'],86:['❄︎','陣雪'],95:['⚡︎','雷雨'],96:['⚡︎','雷雨'],99:['⚡︎','雷雨']};
 let wxState='idle';
@@ -1066,7 +1090,7 @@ function renderWidgets(){const now=new Date(),L=loc(),box=$('#widgets'),col=$('#
   // moon
   if(showWidget('moon')){const e=nrm(moonLon(now)-sunLon(now)),illum=Math.round((1-Math.cos(e*RAD))/2*100),si=Math.floor(moonLon(now)/30),nx=nextChange(x=>Math.floor(moonLon(x)/30),now,2,24*4);
     const sg=SIGNS[si],moonBox=h('div',{class:'row2'});moonBox.innerHTML=moonSVG(e);
-    moonBox.append(h('div',{style:'min-width:0'},h('div',{class:'big',style:'font-size:17px',text:phaseName(e)},h('small',{text:`${illum}%`})),h('div',{class:'sm',text:`${sg[0]} ${sg[1]}`})));
+    moonBox.append(h('div',{style:'min-width:0'},h('div',{class:'big',style:'font-size:15px;white-space:normal;line-height:1.2',text:phaseName(e)},h('small',{text:`${illum}%`})),h('div',{class:'sm',text:`${sg[0]} ${sg[1]}`})));
     W(col,'moon','',h('span',{class:'lb',text:'Moon'}),moonBox,nx?h('span',{class:'sm',text:`${md(nx)} ${hm(nx)} 進入${SIGNS[(si+1)%12][1]}`}):null);}
   box.style.display=box.children.length?'':'none';
   ringWH='';requestAnimationFrame(()=>{ringWH='';buildRing();});}
@@ -1104,7 +1128,25 @@ $('#lenAdd').onclick=()=>{const v=$('#lenSel').value;if(v===''){toast('先選一
 $$('[data-draw]').forEach(b=>b.onclick=()=>{const n=+b.dataset.draw,pool=[...Array(36).keys()],out=[];for(let i=0;i<n;i++)out.push(pool.splice(rnd(pool.length),1)[0]);
   setCards(c=>{c.len=out});$('#dlgSticker').close();addCardStickers(out.map(i=>({deck:'len',i,rev:0})));
   if(!LEN_IMG.some(Boolean))toast('還沒有上傳卡面，先用牌名顯示');});
+$$('[data-open=dlgSticker]').forEach(b=>b.addEventListener('click',()=>{$('#dailyOn').checked=!!S.dailyOn;}));
 $('#openTarot').onclick=()=>{$('#dlgSticker').close();openCards();};
+
+
+/* daily card */
+let dailyRev=0;
+(()=>{const sel=$('#dailyTarot');let g=null,og=null;sel.append(h('option',{value:'',text:'選一張牌'}));
+  TAROT.forEach((t,i)=>{if(t.g!==g){g=t.g;og=h('optgroup',{label:g});sel.append(og);}og.append(h('option',{value:i,text:`${t.no?t.no+' ':''}${t.en}　${t.zh}`}));});})();
+$$('#dailyRev button').forEach(b=>b.onclick=()=>{dailyRev=+b.dataset.rev;$$('#dailyRev button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));});
+function openDaily(kind){$('#dailyLenSec').hidden=kind!=='l';$('#dailyTarotSec').hidden=kind!=='t';
+  const c=(S.cards[dayKey()]||{}).dailyT;$('#dailyTarot').value=c?String(c.i):'';dailyRev=c&&c.rev?1:0;$$('#dailyRev button').forEach(x=>x.setAttribute('aria-selected',String(+x.dataset.rev===dailyRev)));$('#dlgDaily').showModal();}
+function setDaily(kind,c){const key=kind==='t'?'dailyT':'dailyL';setCards(x=>{if(c)x[key]=c;else delete x[key];});save();renderStickers();}
+function drawLen(){const i=rnd(36);setDaily('l',{deck:'len',i,rev:0});if(!LEN_IMG[i])toast(`抽到 ${i+1}. ${LEN[i][1]}`);}
+function dailyTap(kind){if(kind==='l'){if(!(S.cards[dayKey()]||{}).dailyL){drawLen();return}openDaily('l');}else openDaily('t');}
+$('#dailyLen').onclick=()=>{drawLen();$('#dlgDaily').close();};
+$('#dailyLenClear').onclick=()=>{setDaily('l',null);$('#dlgDaily').close();};
+$('#dailyTarotOk').onclick=()=>{const v=$('#dailyTarot').value;if(v===''){toast('先選一張牌');return}setDaily('t',{deck:'tarot',i:+v,rev:dailyRev});$('#dlgDaily').close();};
+$('#dailyClear').onclick=()=>{setDaily('t',null);$('#dlgDaily').close();};
+$('#dailyOn').onchange=e=>{S.dailyOn=e.target.checked;save();renderStickers();};
 
 /* my lenormand deck (stored privately in the worker) */
 let LEN_IMG=[],deckV=0,deckDraft=[],deckSlot=-1;
@@ -1197,7 +1239,7 @@ function renderTodos(){if(S.filter==='open')S.filter='all';$$('.pfoot .chips .ch
 /* ---------- schedule ---------- */
 function sortedSched(day){return S.sched.filter(s=>!day||s.date===day).sort((a,b)=>(a.date+(a.time||'00:00'))<(b.date+(b.time||'00:00'))?-1:1)}
 function fillTimes(sel,val,placeholder){sel.innerHTML='';sel.append(h('option',{value:'',text:placeholder}));
-  for(let m=0;m<1440;m+=15){const v=`${pad(Math.floor(m/60))}:${pad(m%60)}`;sel.append(h('option',{value:v,text:v}));}
+  for(let m=6*60;m<=20*60;m+=15){const v=`${pad(Math.floor(m/60))}:${pad(m%60)}`;sel.append(h('option',{value:v,text:v}));}
   if(val&&!sel.querySelector(`option[value="${val}"]`)){const o=h('option',{value:val,text:val});const after=[...sel.options].find(x=>x.value>val);sel.insertBefore(o,after||null);}
   sel.value=val||'';return sel;}
 function timeSel(val,label,ph){return fillTimes(h('select',{class:'field tsel','aria-label':label}),val,ph);}
@@ -1206,7 +1248,7 @@ function addSched(){const v=$('#schedIn').value.trim();if(!v){$('#schedIn').focu
   const[t,e]=cleanTimes($('#schedTime').value,$('#schedEnd').value);S.sched.push({id:uid(),date:selDay,time:t,end:e,text:v});
   $('#schedIn').value='';$('#schedTime').value='';$('#schedEnd').value='';save();renderSched();renderCal();tick();$('#schedIn').focus();}
 fillTimes($('#schedTime'),'','開始');fillTimes($('#schedEnd'),'','結束');
-$('#schedTime').addEventListener('change',e=>{const v=e.target.value,en=$('#schedEnd');if(v&&(!en.value||en.value<=v)){const[a,b]=v.split(':').map(Number),m=Math.min(1425,a*60+b+60);en.value=`${pad(Math.floor(m/60))}:${pad(m%60)}`;}});
+$('#schedTime').addEventListener('change',e=>{const v=e.target.value,en=$('#schedEnd');if(v&&(!en.value||en.value<=v)){const[a,b]=v.split(':').map(Number),m=Math.min(1200,a*60+b+60);en.value=`${pad(Math.floor(m/60))}:${pad(m%60)}`;}});
 $('#schedAdd').onclick=addSched;
 $('#schedIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)addSched()});
 $('#backToday').onclick=()=>{selDay=dayKey();const d=new Date();calY=d.getFullYear();calM=d.getMonth();renderSched();renderCal();};
@@ -1290,18 +1332,29 @@ function shrink(file,max,type,q,cb){const url=URL.createObjectURL(file),img=new 
 
 /* ---------- stickers ---------- */
 const stage=$('.wrap'),layer=$('#stickers');let selId=null,drag=null;
-const DEF_SIZE={emoji:52,img:130,bubble:15,card:104};
+const DEF_SIZE={emoji:52,img:130,bubble:15,card:104,daily:96};
 function bookBox(){const sr=stage.getBoundingClientRect(),br=$('#book').getBoundingClientRect();return{l:br.left-sr.left,t:br.top-sr.top,w:Math.max(1,br.width)};}
 function anchorSticker(s,el){const B=bookBox();s.fx=+((s.x-B.l)/B.w).toFixed(4);s.by=Math.round(s.y-B.t);
+  if(s.type==='daily')return;
   if(!isMobile()){let cx=s.x+((el&&el.offsetWidth)||s.size)/2;s.pg=cx<B.l+B.w/2?'d:left':'d:'+(S.tab==='today'?'todo':S.tab);}}
 function addSticker(type,v){const w=stage.clientWidth,top=Math.max(0,window.scrollY-stage.offsetTop+60);
   const size=type==='img'?Math.min(130,Math.round(w*.35)):DEF_SIZE[type];
   const st={id:uid(),type,v,size,x:Math.round(Math.max(0,w/2-size/2+(Math.random()*80-40))),y:Math.round(top+Math.random()*80),rot:type==='bubble'?0:Math.round(Math.random()*20-10),pg:curPg()};
   anchorSticker(st,null);S.stickers.push(st);
   selId=S.stickers[S.stickers.length-1].id;if(!save()){S.stickers.pop();selId=null}renderStickers();}
-const LIM={img:[30,420],emoji:[20,240],bubble:[10,36],card:[56,320]};
+const LIM={img:[30,420],emoji:[20,240],bubble:[10,36],card:[56,320],daily:[56,320]};
 const clampSize=(s,v)=>Math.round(Math.min(LIM[s.type][1],Math.max(LIM[s.type][0],v)));
-function applySize(s,sv){if(s.type==='img'||s.type==='card')sv.style.width=s.size+'px';else sv.style.fontSize=s.size+'px';}
+function applySize(s,sv){if(s.type==='img'||s.type==='card'||s.type==='daily')sv.style.width=s.size+'px';else sv.style.fontSize=s.size+'px';}
+function dailyFace(kind){const c=(S.cards[dayKey()]||{})[kind==='t'?'dailyT':'dailyL'];
+  if(c)return cardFace({v:c});
+  return h('div',{class:'sv cardst'},h('span',{class:'cf'},h('b',{text:'✦'}),kind==='t'?'Tarot':'Lenormand',h('span',{style:'font-size:10px;color:#999',text:kind==='t'?'點一下選牌':'點一下抽牌'})));}
+function ensureDaily(){if(!S.dailyOn)return;S.stickers=S.stickers.filter(x=>!(x.type==='daily'&&!x.kind));
+  const lay=isMobile()?'m':'d',B=bookBox(),size=DEF_SIZE.daily;let added=false;
+  ['t','l'].forEach((k,n)=>{const id=`daily-${k}-${lay}`;if(S.stickers.some(x=>x.id===id))return;
+    const x=lay==='m'?B.l+B.w-size-20-(1-n)*(size+16):B.l+B.w*0.5-(2-n)*(size+16)-20;
+    const st={id,type:'daily',kind:k,v:null,size,x:Math.round(x),y:Math.round(B.t+20+n*8),rot:n?4:-4,pg:lay==='m'?'m:today':'d:left'};
+    anchorSticker(st,null);S.stickers.push(st);added=true;});
+  if(added)save(true);}
 function cardFace(s){const c=s.v||{},box=h('div',{class:'sv cardst'+(c.rev?' rev':'')});
   if(c.deck==='tarot'){const img=tarotImg(c.i,false,'');box.append(img);}
   else if(LEN_IMG[c.i])box.append(h('img',{src:LEN_IMG[c.i],alt:`${LEN[c.i][0]}（${LEN[c.i][1]}）`,draggable:'false'}));
@@ -1311,8 +1364,8 @@ function addCardStickers(list){const w=stage.clientWidth,top=Math.max(0,window.s
   list.forEach((c,k)=>{const size=DEF_SIZE.card,st={id:uid(),type:'card',v:c,size,x:Math.round(Math.max(0,w/2-size/2+(k-(n-1)/2)*(size+24))),y:Math.round(top+(k%2)*10),rot:Math.round(Math.random()*10-5),pg:curPg()};
     anchorSticker(st,null);S.stickers.push(st);last=st.id;});
   selId=last;if(!save()){S.stickers.splice(-n,n);selId=null}renderStickers();}
-function renderStickers(){layer.innerHTML='';const W=stage.clientWidth,H=stage.clientHeight,vis=S.stickers.filter(stickerVisible),B=bookBox();let mig=false;
-  vis.forEach(s=>{const on=s.id===selId,el=h('div',{class:'sticker'+(on?' sel':'')});
+function renderStickers(){ensureDaily();layer.innerHTML='';const W=stage.clientWidth,H=stage.clientHeight,vis=S.stickers.filter(stickerVisible),B=bookBox();let mig=false;
+  vis.forEach(s=>{const on=s.id===selId,el=h('div',{class:'sticker'+(on?' sel':'')+(s.type==='daily'?' daily':'')});
     if(s.fx==null){s.fx=+((s.x-B.l)/B.w).toFixed(4);s.by=Math.round(s.y-B.t);mig=true;}
     s.x=Math.round(B.l+s.fx*B.w);s.y=Math.round(B.t+s.by);
     el.style.left=Math.min(Math.max(-30,s.x),Math.max(0,W-30))+'px';el.style.top=Math.min(Math.max(-30,s.y),Math.max(0,H-30))+'px';
@@ -1320,6 +1373,7 @@ function renderStickers(){layer.innerHTML='';const W=stage.clientWidth,H=stage.c
     if(s.type==='img')sv=h('img',{class:'sv',src:s.v,alt:'',draggable:'false'});
     else if(s.type==='bubble')sv=T('sv bubble',s.v);
     else if(s.type==='card')sv=cardFace(s);
+    else if(s.type==='daily')sv=dailyFace(s.kind);
     else sv=h('span',{class:'sv',text:s.v});
     applySize(s,sv);
     const wrap=h('div',{class:'swrap'},sv);wrap.style.transform=`rotate(${s.rot||0}deg)`;
@@ -1330,7 +1384,8 @@ function renderStickers(){layer.innerHTML='';const W=stage.clientWidth,H=stage.c
       s.type==='card'?h('button',{text:'⇅','aria-label':'切換正逆位',title:'切換正逆位',onclick:()=>{s.v={...s.v,rev:s.v.rev?0:1};save();renderStickers();}}):null,
       (s.rot||0)%360?h('button',{text:'0°','aria-label':'轉正',title:'轉正',onclick:()=>{s.rot=0;save();renderStickers();}}):null,
       h('button',{text:'⤒','aria-label':'移到最上層',title:'移到最上層',onclick:()=>{S.stickers=S.stickers.filter(x=>x!==s);S.stickers.push(s);save();renderStickers();}}),
-      h('button',{text:'×','aria-label':'撕掉',title:'撕掉',onclick:()=>{S.stickers=S.stickers.filter(x=>x!==s);selId=null;save();renderStickers();}})));}
+      s.type==='daily'?h('button',{text:'×','aria-label':'收起每日卡牌',title:'收起每日卡牌',onclick:()=>{S.dailyOn=false;selId=null;save();renderStickers();toast('已收起，可以在「貼紙」重新打開');}})
+        :h('button',{text:'×','aria-label':'撕掉',title:'撕掉',onclick:()=>{S.stickers=S.stickers.filter(x=>x!==s);selId=null;save();renderStickers();}})));}
     el.addEventListener('pointerdown',e=>{if(e.target.closest('.stools'))return;e.preventDefault();e.stopPropagation();
       const mode=e.target.closest('.hd.rot')?'rotate':e.target.closest('.hd.rs')?'resize':'drag';
       if(G&&G.s===s&&G.mode==='drag'&&G.pointers.size===1&&mode==='drag'){addPointer(e);return}
@@ -1347,11 +1402,12 @@ const norm=r=>((r%360)+360)%360;
 function snap(r){r=norm(r);for(const t of [0,90,180,270,360])if(Math.abs(r-t)<5)return t%360;return Math.round(r);}
 function begin(el,s,e,mode){try{el.setPointerCapture(e.pointerId)}catch(_){}
   const wrap=el.querySelector('.swrap'),sv=el.querySelector('.sv'),r=wrap.getBoundingClientRect(),c={x:r.left+r.width/2,y:r.top+r.height/2},p={x:e.clientX,y:e.clientY};
-  G={mode,s,el,wrap,sv,pointers:new Map([[e.pointerId,p]]),sx:p.x,sy:p.y,ox:s.x,oy:s.y,rot0:s.rot||0,size0:s.size,c,a0:angOf(c,p),d0:Math.max(8,distOf(c,p))};
+  G={mode,s,el,wrap,sv,moved:false,pointers:new Map([[e.pointerId,p]]),sx:p.x,sy:p.y,ox:s.x,oy:s.y,rot0:s.rot||0,size0:s.size,c,a0:angOf(c,p),d0:Math.max(8,distOf(c,p))};
   el.onpointermove=gMove;el.onpointerup=el.onpointercancel=gUp;}
 function addPointer(e){try{G.el.setPointerCapture(e.pointerId)}catch(_){}G.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   const[a,b]=[...G.pointers.values()];G.mode='pinch';G.pa0=angOf(a,b);G.pd0=Math.max(8,distOf(a,b));G.rot0=G.s.rot||0;G.size0=G.s.size;}
 function gMove(ev){if(!G||!G.pointers.has(ev.pointerId))return;const p={x:ev.clientX,y:ev.clientY};G.pointers.set(ev.pointerId,p);const s=G.s;
+  if(Math.hypot(p.x-G.sx,p.y-G.sy)>5)G.moved=true;
   if(G.mode==='drag'){s.x=Math.round(G.ox+p.x-G.sx);s.y=Math.round(G.oy+p.y-G.sy);G.el.style.left=s.x+'px';G.el.style.top=s.y+'px';}
   else if(G.mode==='rotate'){s.rot=snap(G.rot0+angOf(G.c,p)-G.a0);G.wrap.style.transform=`rotate(${s.rot}deg)`;}
   else if(G.mode==='resize'){s.size=clampSize(s,G.size0*distOf(G.c,p)/G.d0);applySize(s,G.sv);}
@@ -1359,7 +1415,9 @@ function gMove(ev){if(!G||!G.pointers.has(ev.pointerId))return;const p={x:ev.cli
     G.wrap.style.transform=`rotate(${s.rot}deg)`;applySize(s,G.sv);}}
 function gUp(ev){if(!G)return;G.pointers.delete(ev.pointerId);
   if(G.mode==='pinch'&&G.pointers.size===1){const p=[...G.pointers.values()][0];Object.assign(G,{mode:'drag',sx:p.x,sy:p.y,ox:G.s.x,oy:G.s.y});return}
-  if(G.pointers.size===0){const redo=G.mode!=='drag',s=G.s,el=G.el;G=null;if(redo||true){anchorSticker(s,el);}save();renderStickers();}}
+  if(G.pointers.size===0){const s=G.s,el=G.el,tap=G.mode==='drag'&&!G.moved;G=null;
+    if(tap&&s.type==='daily'){renderStickers();dailyTap(s.kind);return}
+    if(!tap){anchorSticker(s,el);save();}renderStickers();}}
 document.addEventListener('pointerdown',e=>{if(selId&&!G&&!e.target.closest('.sticker')){selId=null;renderStickers();}});
 let rsz;window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(renderStickers,120)});
 $('#emojis').append(...EMOJI.map(em=>h('button',{text:em,'aria-label':'貼上 '+em,onclick:()=>{$('#dlgSticker').close();addSticker('emoji',em);}})));
@@ -1574,7 +1632,7 @@ function copy(text,ta,msg){const done=()=>toast(msg||'已複製');
     const ro=t.hasAttribute('readonly');t.removeAttribute('readonly');t.focus();t.select();try{document.execCommand('copy');done()}catch(e){toast('請手動複製')}if(ro)t.setAttribute('readonly','');if(tmp)t.remove();};
   if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback)}else fallback();}
 /* full backup / restore */
-const BK_KEYS=['todos','sched','memos','stickers','mine','cur','curId','filter','tab','stv','shotHour','wMobile','loc','work','cards','nmap','gmap','gcalOn','gcalFrom','wlmap','wlOpts','tlogs','tlmap','tlOpts'];
+const BK_KEYS=['todos','sched','memos','stickers','mine','cur','curId','filter','tab','stv','shotHour','wMobile','loc','work','cards','nmap','gmap','gcalOn','gcalFrom','wlmap','wlOpts','tlogs','tlmap','tlOpts','dailyOn'];
 $('#bkCopy').onclick=()=>{const withImg=$('#bkImg').checked,d={};BK_KEYS.forEach(k=>d[k]=JSON.parse(JSON.stringify(S[k]??null)));
   if(!withImg){const strip=t=>{if(t&&t.img){delete t.img;if(t.pattern==='image')t.pattern='none';}};strip(d.cur);(d.mine||[]).forEach(strip);d.stickers=(d.stickers||[]).filter(x=>x.type!=='img');}
   const code=JSON.stringify({app:'officememo',v:1,at:new Date().toISOString(),data:d});$('#bkIO').value=code;copy(code,$('#bkIO'),`已複製備份（${(code.length/1024).toFixed(0)} KB）`);};
