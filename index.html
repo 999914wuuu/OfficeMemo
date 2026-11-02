@@ -238,6 +238,7 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .tagbox button[aria-pressed="true"]{background:var(--soft);color:var(--accent);border-color:transparent}
 .tagbox input{width:7em;min-height:28px;border:1px dashed var(--line);border-radius:999px;padding:0 10px;background:transparent;font-size:12px}
 .wlpill{border:none;border-radius:999px;font-size:11px;padding:2px 8px;white-space:nowrap;flex:0 0 auto;margin-top:-1px;background:var(--soft);color:var(--accent)}
+.wlpill.wait{background:var(--field);color:var(--muted)}
 .wlpill.warn{background:color-mix(in srgb,#C0392B 14%,transparent);color:#C0392B}
 .tlform{display:flex;flex-direction:column;gap:8px}
 .tlform .wlr{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -509,7 +510,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
       </nav>
     </div>
   </div>
-  <div class="verline">OfficeMemo v2.2</div>
+  <div class="verline">OfficeMemo v2.5</div>
   <div class="stickers" id="stickers"></div>
 </div>
 
@@ -742,7 +743,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
     </div>
     <div class="row"><button class="btn primary sm" id="sySave">連線</button><button class="btn sm" id="syNow">立即同步</button><button class="btn ghost sm" id="syOff">停用</button></div>
     <div class="status" id="syStatus" style="margin-top:6px"></div>
-    <div class="row" style="margin-top:6px"><button class="btn ghost sm" id="syHist">雲端歷史版本</button></div>
+    <div class="row" style="margin-top:6px"><button class="btn ghost sm" id="syHist">雲端歷史版本</button><button class="btn ghost sm" id="syDiag">複製診斷資訊</button></div>
     <div id="histList"></div>
     <div class="row" style="margin-top:12px">
       <label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="gcalOn" style="accent-color:var(--accent);width:17px;height:17px">行程同步到 Google 日曆</label>
@@ -851,7 +852,7 @@ function fmtDay(d,style){const ja=DF()==='ja';
 
 const isMobile=()=>matchMedia('(max-width:860px)').matches;
 let prefersDark=false;try{prefersDark=matchMedia('(prefers-color-scheme: dark)').matches}catch(e){}
-let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},dailyOn:true,wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
+let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlerr:{},wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},dailyOn:true,wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
 try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);Object.keys(S).forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});}}catch(e){}
 function fixTheme(t){if(!t)return t;if(!t.page&&t.card)t.page=t.card;delete t.card;
   if(t.body&&!t.zh)t.zh=t.body;delete t.body;
@@ -1191,6 +1192,7 @@ function renderTabs(){const m=isMobile(),tab=(!m&&S.tab==='today')?'todo':S.tab,
   $$('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===tab));
   $$('.pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===pane));}
 function goTab(t){const from=TABS.indexOf(S.tab),to=TABS.indexOf(t);if(from===to&&!(t==='today'))return;
+  if(curEditSave){curEditSave(true);renderSched();}
   S.tab=t;selId=null;save();renderTabs();if(t==='cal')renderCal();if(t==='tlog'){renderTlog();tlLoad(false);}
   if(isMobile()&&from!==to){const pg=t==='today'?$('#pageL'):$('#pageR');pg.classList.remove('flip-n','flip-p');void pg.offsetWidth;pg.classList.add(to>from?'flip-n':'flip-p');}
   renderStickers();}
@@ -1259,27 +1261,31 @@ function renderSched(){const isToday=selDay===dayKey(),d=keyToDate(selDay);
   const ul=$('#schedList');ul.innerHTML='';const list=sortedSched(selDay);
   if(!list.length){ul.append(h('li',{class:'empty',text:isToday?'今天沒有排行程。':'這天還沒有行程。'}));return}
   list.forEach(s=>{if(s.id===editId){ul.append(editRow(s));return}
-    const startEdit=()=>{editId=s.id;renderSched();const f=ul.querySelector('.editing [data-k=text]');f&&f.focus();};
+    const startEdit=()=>{if(editId&&editId!==s.id&&curEditSave)curEditSave(true);editId=s.id;renderSched();const f=ul.querySelector('.editing [data-k=text]');f&&f.focus();};
     ul.append(h('li',{class:'item editable'},
     h('span',{class:'time',text:timeLabel(s),title:'點一下編輯',onclick:startEdit}),(()=>{const t=T('txt',s.text);t.title='點一下編輯';t.onclick=startEdit;return t})(),
-    s.log&&s.log.on?h('span',{class:'wlpill'+(wlMissing(s).length?' warn':''),title:wlMissing(s).length?'口譯紀錄還缺：'+wlMissing(s).join('、'):'已記到口譯紀錄',text:wlMissing(s).length?'口譯・缺欄位':'口譯'}):null,
+    s.log&&s.log.on?(()=>{const miss=wlMissing(s),err=(S.wlerr||{})[s.id],m=(S.wlmap||{})[s.id],synced=m&&m.h===wlHash(s);
+      const [cls,txt,tip]=miss.length?[' warn','口譯・缺欄位','還缺：'+miss.join('、')]:err?[' warn','口譯・失敗',err]:synced?['','口譯','已寫進 Notion']:[' wait','口譯・待同步','停手幾秒後會自動寫進 Notion'];
+      return h('span',{class:'wlpill'+cls,title:tip,text:txt});})():null,
     S.gcalOn?null:h('button',{class:'gc',text:'+ Google',title:'加到 Google 行事曆',onclick:()=>openGcal(s)}),
     h('button',{class:'x','aria-label':'刪除',text:'×',onclick:()=>{S.sched=S.sched.filter(x=>x!==s);save();renderSched();renderCal();tick();}})));});}
 let editId=null;
+let curEditSave=null;
 function editRow(s){const f={};const wl=JSON.parse(JSON.stringify(s.log||{on:false,si:'CI',dept:'',persons:[],routine:false,kpi:[],memo:'',hours:null,hoursManual:false}));
   const inp=(k,attrs)=>f[k]=h('input',Object.assign({class:'field','data-k':k},attrs));
-  const done=()=>{editId=null;renderSched();};
-  const saveIt=()=>{const text=f.text.value.trim();if(!text){f.text.focus();return}
+  const done=()=>{editId=null;curEditSave=null;renderSched();};
+  const saveIt=(silent)=>{const text=f.text.value.trim();if(!text){if(silent===true)return;f.text.focus();return}
     const date=/^\d{4}-\d{2}-\d{2}$/.test(f.date.value)?f.date.value:s.date;const[t,e]=cleanTimes(f.time.value,f.end.value);
     const moved=date!==s.date;Object.assign(s,{date,time:t,end:e,text});
     if(wl.on){wl.hours=wl.hoursManual?wl.hours:autoHours(t,e);s.log=JSON.parse(JSON.stringify(wl));}else if(s.log)s.log.on=false;
-    save();editId=null;renderSched();renderCal();tick();
+    save();curEditSave=null;if(silent===true){editId=null;return}editId=null;renderSched();renderCal();tick();
     if(moved)toast(`已移到 ${shortDay(date)}`);};
+  curEditSave=saveIt;
   const li=h('li',{class:'item editing'},
     inp('date',{type:'date',value:s.date,'aria-label':'日期'}),h('div',{class:'trow'},(f.time=timeSel(s.time||'','開始時間','開始')),h('span',{class:'dash',text:'–'}),(f.end=timeSel(s.end||'','結束時間','結束'))),
     inp('text',{value:s.text,'aria-label':'行程內容',enterkeyhint:'done'}),
     wlSection(s,wl,f),
-    h('div',{class:'acts'},h('button',{class:'btn sm ghost',text:'取消',onclick:done}),h('button',{class:'btn sm primary',text:'儲存',onclick:saveIt})));
+    h('div',{class:'acts'},h('button',{class:'btn sm ghost',text:'取消',onclick:done}),h('button',{class:'btn sm primary',text:'儲存',onclick:()=>saveIt()})));
   li.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.target.tagName==='INPUT'){e.preventDefault();saveIt();}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done();}});
   return li;}
 function gcalUrl(s){const ymd=k=>k.replace(/-/g,''),d=keyToDate(s.date);let dates;
@@ -1709,12 +1715,16 @@ async function syRun(mode){if(!syOn())return;if(syBusy){syAgain=true;return}syBu
       if(!confirm(`這台的資料比雲端少很多（這台 ${localN} 筆、雲端 ${remN} 筆）。\n按「確定」用這台覆蓋雲端；按「取消」改用雲端的內容。`)){applyRemote(rem);return}
       keepLocal=true;}
     if(localDirty||!rem){
-      const left=await pushNotion();const leftG=await pushGcal();const leftW=await pushWl();const leftT=await pushTl();
+      const errs=[];const safe=async(fn,name)=>{try{return await fn()}catch(e){if(e&&e.message==='pass')throw e;errs.push(name);return 0}};
+      const left=await safe(pushNotion,'notion'),leftG=await safe(pushGcal,'gcal'),leftW=await safe(pushWl,'wl'),leftT=await safe(pushTl,'tl');
       const at=SM.at||Date.now();
       let p=await syFetch('/state',{method:'PUT',body:JSON.stringify({at,data:stateData(),force:keepLocal})});
       if(p.status===409){syBusy=false;return syRun('pull')}
       if(!p.ok)throw new Error(p.status===401?'pass':'net');
       SM.rat=at;saveSM();if(left>0||leftG>0||leftW>0||leftT>0)syAgain=true;
+      if(errs.length){const names={notion:'待辦／筆記（Notion）',gcal:'Google 日曆',wl:'口譯紀錄',tl:'筆譯紀錄'};
+        syStatus(`資料已同步，但 ${errs.map(x=>names[x]).join('、')} 寫入失敗，稍後會再試`);if(!syErrShown){toast(`${errs.map(x=>names[x]).join('、')} 寫入失敗`);syErrShown=true;}
+        clearTimeout(syTimer);syTimer=setTimeout(()=>{SM.at=Date.now();saveSM();syRun('push');},60000);return}
     }
     syStatus(`已同步　${hm(new Date())}`);syErrShown=false;
   }catch(e){const m={pass:'通關密碼不對',origin:'這個網址沒有被 Worker 允許（檢查 ALLOWED_ORIGINS）',notion:'Notion 寫入失敗，檢查 token、資料庫 ID 和欄位名稱',gcal:'Google 日曆寫入失敗，按「測試連線」檢查設定',wl:'口譯紀錄寫入失敗，檢查 INTERP_DB_ID 和 Notion 連線',tl:'筆譯紀錄寫入失敗，檢查 TRANS_DB_ID 和 Notion 連線',net:'連不上 Worker'}[e.message]||'同步失敗';
@@ -1783,9 +1793,9 @@ function wlOps(){const ops=[],seen=new Set(),wm=S.wlmap||(S.wlmap={});
 async function pushWl(){const ops=wlOps();if(!ops.length)return 0;const batch=ops.slice(0,20);let tz='Asia/Taipei';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||tz}catch(e){}
   const r=await syFetch('/wl',{method:'POST',body:JSON.stringify({tz,ops:batch.map(({h,...o})=>o)})});
   if(!r.ok)throw new Error(r.status===401?'pass':'wl');
-  let fail=0;(r.j.results||[]).forEach(res=>{const op=batch.find(o=>o.id===res.id);if(!op)return;if(!res.ok){fail++;return}
+  let fail=0,firstErr='';S.wlerr=S.wlerr||{};(r.j.results||[]).forEach(res=>{const op=batch.find(o=>o.id===res.id);if(!op)return;if(!res.ok){fail++;S.wlerr[op.id]=String(res.error||'錯誤');firstErr=firstErr||S.wlerr[op.id];return}delete S.wlerr[op.id];
     if(op.action==='create')S.wlmap[op.id]={p:res.pageId,h:op.h};else if(op.action==='update'&&S.wlmap[op.id])S.wlmap[op.id].h=op.h;else if(op.action==='archive')delete S.wlmap[op.id];});
-  save(true);if(fail)throw new Error('wl');return ops.length-batch.length;}
+  save(true);if(!editId)renderSched();if(fail)toast(`有 ${fail} 筆口譯紀錄寫不進 Notion：${firstErr}`);return ops.length-batch.length;}
 
 
 /* ---------- Trans-Log (Translating Record) ---------- */
@@ -1843,9 +1853,9 @@ function tlOps(){const ops=[],seen=new Set(),tm=S.tlmap||(S.tlmap={});
   Object.keys(tm).forEach(id=>{if(!seen.has(id))ops.push({id,action:'archive',pageId:tm[id].p});});return ops;}
 async function pushTl(){const ops=tlOps();if(!ops.length)return 0;const batch=ops.slice(0,20);
   const r=await syFetch('/tl',{method:'POST',body:JSON.stringify({ops:batch.map(({h,...o})=>o)})});if(!r.ok)throw new Error(r.status===401?'pass':'tl');
-  let fail=0;(r.j.results||[]).forEach(res=>{const op=batch.find(o=>o.id===res.id);if(!op)return;if(!res.ok){fail++;return}
+  let fail=0,firstErr='';(r.j.results||[]).forEach(res=>{const op=batch.find(o=>o.id===res.id);if(!op)return;if(!res.ok){fail++;firstErr=firstErr||String(res.error||'錯誤');return}
     if(op.action==='create')S.tlmap[op.id]={p:res.pageId,h:op.h};else if(op.action==='update'&&S.tlmap[op.id])S.tlmap[op.id].h=op.h;else if(op.action==='archive')delete S.tlmap[op.id];});
-  save(true);if(fail)throw new Error('tl');return ops.length-batch.length;}
+  save(true);if(fail)toast(`有 ${fail} 筆筆譯紀錄寫不進 Notion：${firstErr}`);return ops.length-batch.length;}
 
 /* ---------- Google Calendar sync (through the worker) ---------- */
 const gHash=s=>[s.date,s.time||'',s.end||'',s.text].join('|');
@@ -1884,12 +1894,19 @@ $('#syHist').onclick=async()=>{if(!syOn()){toast('要先連上雲端同步');ret
         SYNC_KEYS.forEach(k=>{if(g.j.data[k]!==undefined&&g.j.data[k]!==null)S[k]=g.j.data[k];});fixTheme(S.cur);(S.mine||[]).forEach(fixTheme);
         save();applyTheme();renderAll();$('#dlgExport').close();toast('已還原，會自動同步回雲端');}})));});}
   catch(e){box.innerHTML='<p class="hint">讀不到歷史版本，確認 Worker 已更新成新版。</p>';}};
+$('#syDiag').onclick=async()=>{let cloud=null;try{if(syOn()){const g=await syFetch('/state');if(g.ok&&g.j&&g.j.data)cloud={at:new Date(g.j.at).toISOString(),sched:(g.j.data.sched||[]).length,logged:(g.j.data.sched||[]).filter(x=>x.log&&x.log.on).length,wlmap:Object.keys(g.j.data.wlmap||{}).length};}}catch(e){cloud='讀取失敗'}
+  const d={version:($('.verline')||{}).textContent,now:new Date().toISOString(),syncOn:syOn(),status:syLast,meta:{at:SM.at&&new Date(SM.at).toISOString(),rat:SM.rat&&new Date(SM.rat).toISOString()},cloud,
+    gcalOn:!!S.gcalOn,wlOpts:{depts:(S.wlOpts.depts||[]).length,persons:(S.wlOpts.persons||[]).length,kpis:(S.wlOpts.kpis||[]).length},wlRecent:{n:wlRecent.list.length,err:wlRecent.err},
+    pendingOps:{notion:notionOps().length,gcal:gcalOps().length,wl:wlOps().length,tl:tlOps().length},
+    sched:S.sched.map(x=>({id:x.id.slice(-5),date:x.date,time:x.time,end:x.end,title:(x.text||'').slice(0,12),log:x.log?{on:!!x.log.on,si:x.log.si,dept:!!x.log.dept,hours:x.log.hours}:null,
+      missing:x.log&&x.log.on?wlMissing(x):[],mapped:!!(S.wlmap||{})[x.id],synced:!!((S.wlmap||{})[x.id]&&S.wlmap[x.id].h===wlHash(x)),err:(S.wlerr||{})[x.id]||''}))};
+  copy(JSON.stringify(d,null,1),null,'已複製診斷資訊，貼給 Claude 就好');};
 function syFill(){$('#gcalOn').checked=!!S.gcalOn;$('#syUrl').value=SY.url||'';$('#syPass').value=SY.pass||'';syStatus(syOn()?(syLast||'已設定，等待同步'):'尚未連線');}
 $('#sySave').onclick=()=>{setTimeout(wlLoadOpts,2000);const url=$('#syUrl').value.trim(),pass=$('#syPass').value;if(!/^https:\/\//.test(url)||!pass){toast('請填 https 開頭的 Worker 網址和通關密碼');return}
   SY={url,pass};try{localStorage.setItem(SY_KEY,JSON.stringify(SY))}catch(e){}syRun('pull');};
 $('#syNow').onclick=()=>{if(!syOn()){toast('先填好 Worker 網址和通關密碼');return}syRun('push');};
 $('#syOff').onclick=()=>{if(!confirm('停用雲端同步？雲端和 Notion 上的資料不會被刪除。'))return;SY={};try{localStorage.removeItem(SY_KEY)}catch(e){}syFill();};
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&syOn())syRun('pull');});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&curEditSave){curEditSave(true);renderSched();}if(document.visibilityState==='visible'&&syOn())syRun('pull');});
 
 $('#wipe').onclick=()=>{if(!confirm('待辦、行程、筆記和貼紙都會刪掉，主題保留。確定？'))return;Object.assign(S,{todos:[],sched:[],memos:[],stickers:[]});save();renderAll();$('#dlgTheme').close();toast('已清空');};
 
