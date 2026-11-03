@@ -201,7 +201,10 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .ck{appearance:none;-webkit-appearance:none;flex:0 0 20px;width:20px;height:20px;margin:0;border:1.5px solid color-mix(in srgb,var(--ink) 45%,transparent);border-radius:50%;cursor:pointer;background:transparent}
 .ck:checked{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--page)}
 .pill{border:none;background:var(--soft);color:var(--accent);border-radius:999px;font-size:12px;padding:2px 9px;cursor:pointer;min-height:24px;white-space:nowrap}
-.bolt{border:none;background:transparent;cursor:pointer;font-size:13px;width:28px;height:28px;border-radius:8px;flex:0 0 28px;filter:grayscale(1);opacity:.28}
+.bolt{border:none;background:transparent;cursor:pointer;font-size:15px;font-weight:600;width:28px;height:28px;border-radius:8px;flex:0 0 28px;color:var(--muted);opacity:.35}
+.lined li.tape{list-style:none;border:none;min-height:0;height:20px;width:58%;margin:12px auto 10px;padding:0;opacity:.8;transform:rotate(-1.2deg);
+  background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--accent) 34%,transparent) 0 7px,color-mix(in srgb,var(--accent) 18%,transparent) 7px 14px);
+  clip-path:polygon(0 12%,3% 0,6% 14%,9% 2%,12% 10%,88% 6%,91% 0,94% 12%,97% 2%,100% 10%,100% 90%,97% 100%,94% 86%,91% 98%,88% 92%,12% 96%,9% 86%,6% 100%,3% 88%,0 98%)}
 .bolt:hover{opacity:.8;filter:none;background:var(--soft)}
 .gc{border:1px solid var(--line);background:transparent;cursor:pointer;border-radius:999px;font-size:11px;font-family:var(--num);padding:2px 8px;min-height:26px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
 .gc:hover{color:var(--accent);border-color:var(--accent)}
@@ -238,6 +241,10 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .tagbox button[aria-pressed="true"]{background:var(--soft);color:var(--accent);border-color:transparent}
 .tagbox input{width:7em;min-height:28px;border:1px dashed var(--line);border-radius:999px;padding:0 10px;background:transparent;font-size:12px}
 .wlpill{border:none;border-radius:999px;font-size:11px;padding:2px 8px;white-space:nowrap;flex:0 0 auto;margin-top:-1px;background:var(--soft);color:var(--accent)}
+.sugrow{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;border:1px solid var(--line);background:var(--page);border-radius:10px;padding:7px 10px;cursor:pointer;text-align:left;position:relative;z-index:7}
+.sugrow:hover{border-color:var(--accent);background:var(--soft)}
+.sugrow .sugname{font-size:14px;overflow-wrap:anywhere}
+.sugrow small{font-size:11px;color:var(--muted)}
 .wlpill.wait{background:var(--field);color:var(--muted)}
 .wlpill.warn{background:color-mix(in srgb,#C0392B 14%,transparent);color:#C0392B}
 .tlform{display:flex;flex-direction:column;gap:8px}
@@ -465,14 +472,14 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
           <div class="psub"><span id="todoDate" class="dfont"></span><span id="todoCount"></span></div>
           <div class="add">
             <input class="field" id="todoIn" placeholder="加一件事，Enter 加入" enterkeyhint="done">
-            <button class="tog" id="quickTog" aria-pressed="false" title="五分鐘內能做完的事">⚡ 小事</button>
+            <button class="tog" id="quickTog" aria-pressed="false" title="標成優先處理">↑ 優先</button>
           </div>
           <ul class="lined" id="todoList"></ul>
           <div class="pfoot">
             <button class="chip" id="doneTog" aria-pressed="false" hidden></button>
             <div class="chips">
               <button class="chip" data-f="all" aria-pressed="true">全部</button>
-              <button class="chip" data-f="quick" aria-pressed="false">⚡ 小事</button>
+              <button class="chip" data-f="quick" aria-pressed="false">↑ 優先</button>
             </div>
           </div>
         </div>
@@ -510,7 +517,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
       </nav>
     </div>
   </div>
-  <div class="verline">OfficeMemo v2.5</div>
+  <div class="verline">OfficeMemo v2.8</div>
   <div class="stickers" id="stickers"></div>
 </div>
 
@@ -1210,7 +1217,7 @@ matchMedia('(max-width:860px)').addEventListener('change',()=>{selId=null;render
 /* ---------- todo ---------- */
 let quick=false;
 $('#quickTog').onclick=e=>{quick=!quick;e.currentTarget.setAttribute('aria-pressed',quick)};
-function addTodo(){const inp=$('#todoIn'),v=inp.value.trim();if(!v){inp.focus();return}S.todos.push({id:uid(),text:v,done:false,quick});inp.value='';
+function addTodo(){const inp=$('#todoIn'),v=inp.value.trim();if(!v){inp.focus();return}S.todos.push({id:uid(),text:v,done:false,pri:quick});inp.value='';
   quick=false;$('#quickTog').setAttribute('aria-pressed','false');save();renderTodos();inp.focus();}
 $('#todoIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)addTodo()});
 $$('.pfoot .chip').forEach(c=>c.onclick=()=>{S.filter=c.dataset.f;save();renderTodos();});
@@ -1218,13 +1225,15 @@ let showDone=false,editTodo=null,editMemo=null;
 $('#doneTog').onclick=()=>{showDone=!showDone;renderTodos();};
 function renderTodos(){if(S.filter==='open')S.filter='all';$$('.pfoot .chips .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.f===S.filter));
   const ul=$('#todoList');ul.innerHTML='';
-  let list=S.todos.filter(t=>!t.done);if(S.filter==='quick')list=list.filter(t=>t.quick);
+  let list=S.todos.filter(t=>!t.done);if(S.filter==='quick')list=list.filter(t=>t.pri);
+  const priL=list.filter(t=>t.pri),normL=list.filter(t=>!t.pri);list=[...priL,...normL];
   const doneList=S.todos.filter(t=>t.done),open=S.todos.length-doneList.length;
   $('#todoCount').textContent=open?`${open} to go`:'';
   const dt=$('#doneTog');dt.hidden=!doneList.length;dt.textContent=showDone?`隱藏已完成`:`已完成 ${doneList.length}`;dt.setAttribute('aria-pressed',showDone);
   if(showDone)list=[...list,...doneList];
-  if(!list.length){ul.append(h('li',{class:'empty',text:S.filter==='quick'?'沒有標成小事的待辦。':open?'這裡清空了。':(doneList.length?'全部完成了！':'還沒有待辦，趁空檔記一件。')}));return}
-  list.forEach(t=>{
+  if(!list.length){ul.append(h('li',{class:'empty',text:S.filter==='quick'?'沒有標成優先的待辦。':open?'這裡清空了。':(doneList.length?'全部完成了！':'還沒有待辦，趁空檔記一件。')}));return}
+  list.forEach((t,ix)=>{
+    if(priL.length&&normL.length&&ix===priL.length)ul.append(h('li',{class:'tape','aria-hidden':'true'}));
     if(editTodo===t.id){const inp=h('input',{class:'field',value:t.text,'aria-label':'編輯待辦',enterkeyhint:'done'});
       const done=ok=>{if(ok){const v=inp.value.trim();if(v&&v!==t.text){t.text=v.slice(0,300);save();}}editTodo=null;renderTodos();};
       inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();done(true)}if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done(false)}});
@@ -1234,8 +1243,8 @@ function renderTodos(){if(S.filter==='open')S.filter='all';$$('.pfoot .chips .ch
     ul.append(h('li',{class:'item'+(t.done?' done':'')},
     h('input',{type:'checkbox',class:'ck','aria-label':'完成',checked:t.done,onchange:e=>{t.done=e.target.checked;save();if(t.done)toast('完成了！已收進「已完成」');renderTodos();}}),
     tx,
-    t.quick?h('button',{class:'pill',text:'⚡ 小事',title:'取消小事',onclick:()=>{t.quick=false;save();renderTodos();}})
-      :h('button',{class:'bolt',text:'⚡','aria-label':'標成小事',title:'標成小事',onclick:()=>{t.quick=true;save();renderTodos();}}),
+    t.pri?h('button',{class:'pill',text:'↑ 優先',title:'取消優先',onclick:()=>{t.pri=false;save();renderTodos();}})
+      :h('button',{class:'bolt',text:'↑','aria-label':'標成優先',title:'標成優先',onclick:()=>{t.pri=true;save();renderTodos();}}),
     h('button',{class:'x','aria-label':'刪除',text:'×',onclick:()=>{S.todos=S.todos.filter(x=>x!==t);save();renderTodos();}})));});}
 
 /* ---------- schedule ---------- */
@@ -1266,7 +1275,8 @@ function renderSched(){const isToday=selDay===dayKey(),d=keyToDate(selDay);
     h('span',{class:'time',text:timeLabel(s),title:'點一下編輯',onclick:startEdit}),(()=>{const t=T('txt',s.text);t.title='點一下編輯';t.onclick=startEdit;return t})(),
     s.log&&s.log.on?(()=>{const miss=wlMissing(s),err=(S.wlerr||{})[s.id],m=(S.wlmap||{})[s.id],synced=m&&m.h===wlHash(s);
       const [cls,txt,tip]=miss.length?[' warn','口譯・缺欄位','還缺：'+miss.join('、')]:err?[' warn','口譯・失敗',err]:synced?['','口譯','已寫進 Notion']:[' wait','口譯・待同步','停手幾秒後會自動寫進 Notion'];
-      return h('span',{class:'wlpill'+cls,title:tip,text:txt});})():null,
+      const url=m&&m.p?'https://www.notion.so/'+String(m.p).replace(/-/g,''):'';
+      return url?h('a',{class:'wlpill'+cls,title:tip+'（點一下打開 Notion 頁面）',text:txt,href:url,target:'_blank',rel:'noopener',style:'text-decoration:none'}):h('span',{class:'wlpill'+cls,title:tip,text:txt});})():null,
     S.gcalOn?null:h('button',{class:'gc',text:'+ Google',title:'加到 Google 行事曆',onclick:()=>openGcal(s)}),
     h('button',{class:'x','aria-label':'刪除',text:'×',onclick:()=>{S.sched=S.sched.filter(x=>x!==s);save();renderSched();renderCal();tick();}})));});}
 let editId=null;
@@ -1754,11 +1764,11 @@ function wlSection(s,wl,f){const box=h('div',{class:'wlbox'}),body=h('div',{styl
   async function loadAll(force){status.textContent='讀取口譯紀錄的選項和過去紀錄中…';await Promise.all([wlLoadOpts(force),wlLoadRecent(force)]);
     const nOpt=(S.wlOpts.depts||[]).length;status.textContent=wlRecent.err?`讀不到 Notion 的口譯紀錄：${wlRecent.err}`:(wlOptErr?`讀不到欄位選項：${wlOptErr}`:`已載入 ${nOpt} 個部門、${wlRecent.list.length} 筆過去紀錄`);drawSug();drawBody();}
   function drawSug(){sug.innerHTML='';const list=wlSuggest(curTitle());if(!list.length)return;
-    sug.append(h('div',{class:'hint',style:'margin:0',text:'過去類似的紀錄，是同一場會議的話按「帶入」：'}));
-    list.forEach(({r})=>sug.append(h('div',{class:'pick',style:'padding:4px 2px;align-items:center'},
-      h('span',{style:'flex:1;font-size:13px',text:`${r.date?shortDay(r.date)+'　':''}${r.name}　${[r.si,r.dept,(r.persons||[]).join('、')].filter(Boolean).join('・')}`}),
-      h('button',{type:'button',class:'btn sm',text:'帶入',onclick:()=>{if(f.text&&r.name){const parts=f.text.value.split('｜');parts[0]=r.name;f.text.value=parts.join('｜');}Object.assign(wl,{si:r.si||wl.si,dept:r.dept||'',persons:[...(r.persons||[])],kpi:[...(r.kpi||[])],routine:!!r.routine,memo:r.memo||''});
-        ['depts','persons','kpis'].forEach(k=>{const vals=k==='depts'?[r.dept]:k==='persons'?r.persons||[]:r.kpi||[];vals.filter(Boolean).forEach(v=>addOpt(k,v));});drawBody();toast('已帶入，請確認內容');}}))));}
+    sug.append(h('div',{class:'hint',style:'margin:0',text:'過去類似的紀錄，點一下就帶入那筆的標籤：'}));
+    list.forEach(({r})=>sug.append(h('button',{type:'button',class:'sugrow',title:'點一下帶入這筆的標籤（標題和 Memo 不會改）',onclick:()=>{
+        Object.assign(wl,{si:r.si||wl.si,dept:r.dept||wl.dept,persons:[...(r.persons||[])],kpi:[...(r.kpi||[])],routine:!!r.routine});
+        ['depts','persons','kpis'].forEach(k=>{const vals=k==='depts'?[r.dept]:k==='persons'?r.persons||[]:r.kpi||[];vals.filter(Boolean).forEach(v=>addOpt(k,v));});drawBody();toast('已帶入標籤，請確認內容');}},
+      h('span',{class:'sugname',text:r.name}),h('small',{text:[r.date&&shortDay(r.date),r.si,r.dept,(r.persons||[]).join('、')].filter(Boolean).join('・')}))));}
   function drawBody(){body.innerHTML='';
     const seg=h('div',{class:'seg'},...['SI','CI','支援'].map(v=>h('button',{type:'button','aria-selected':wl.si===v,text:v,onclick:()=>{wl.si=v;[...seg.children].forEach(b=>b.setAttribute('aria-selected',String(b.textContent===v)));}})));
     const hrs=h('input',{type:'number',class:'field',step:'0.5',min:'0',value:wl.hoursManual&&typeof wl.hours==='number'?wl.hours:(autoHours(f.time&&f.time.value,f.end&&f.end.value)??(wl.hours??'')),oninput:e=>{wl.hours=e.target.value===''?null:+e.target.value;wl.hoursManual=e.target.value!=='';}});
@@ -1817,8 +1827,8 @@ function renderTlog(){const box=$('#tlForm');if(!box)return;box.innerHTML='';if(
   const drawSug=()=>{sug.innerHTML='';const q=name.value.trim();if(q.length<2){sug.hidden=true;return}const seen=new Set();
     const list=tlRecent.list.map(r=>({r,sc:Math.max(similar(q,r.name||''),(r.name||'').includes(q)?.9:0)})).filter(x=>x.sc>=.3).sort((a,b)=>b.sc-a.sc||(b.r.date>a.r.date?1:-1)).filter(x=>{if(seen.has(x.r.name))return false;seen.add(x.r.name);return true}).slice(0,6);
     if(!list.length){sug.hidden=true;return}sug.hidden=false;
-    list.forEach(({r})=>sug.append(h('button',{type:'button',onclick:()=>{Object.assign(d,{name:r.name,ft:r.ft,cat:r.cat,dept:r.dept,routine:!!r.routine,kpi:[...(r.kpi||[])],memo:r.memo||'',date:dayKey()});
-      if(r.cat&&!S.tlOpts.cats.includes(r.cat))S.tlOpts.cats.push(r.cat);if(r.dept)addOpt('depts',r.dept);renderTlog();toast('已帶入，日期改成今天');}},r.name,h('small',{text:[r.date&&shortDay(r.date),r.ft,r.cat,r.dept].filter(Boolean).join('・')}))));};
+    list.forEach(({r})=>sug.append(h('button',{type:'button',onclick:()=>{d.name=name.value.trim()||d.name;Object.assign(d,{ft:r.ft||d.ft,cat:r.cat||d.cat,dept:r.dept||d.dept,routine:!!r.routine,kpi:[...(r.kpi||[])]});
+      if(r.cat&&!S.tlOpts.cats.includes(r.cat))S.tlOpts.cats.push(r.cat);if(r.dept)addOpt('depts',r.dept);renderTlog();toast('已帶入標籤，檔名和 Memo 不會改');}},r.name,h('small',{text:[r.date&&shortDay(r.date),r.ft,r.cat,r.dept].filter(Boolean).join('・')}))));};
   let st;name.addEventListener('input',()=>{d.name=name.value;clearTimeout(st);st=setTimeout(drawSug,300);});name.addEventListener('blur',()=>setTimeout(()=>{sug.hidden=true},200));
   const date=h('input',{type:'date',class:'field',value:d.date,oninput:e=>{d.date=e.target.value}});
   const seg=h('div',{class:'seg'},...TL_TYPES.map(v=>h('button',{type:'button','aria-selected':d.ft===v,text:v,onclick:()=>{d.ft=v;[...seg.children].forEach(b=>b.setAttribute('aria-selected',String(b.textContent===v)));}})));
@@ -1899,7 +1909,7 @@ $('#syDiag').onclick=async()=>{let cloud=null;try{if(syOn()){const g=await syFet
     gcalOn:!!S.gcalOn,wlOpts:{depts:(S.wlOpts.depts||[]).length,persons:(S.wlOpts.persons||[]).length,kpis:(S.wlOpts.kpis||[]).length},wlRecent:{n:wlRecent.list.length,err:wlRecent.err},
     pendingOps:{notion:notionOps().length,gcal:gcalOps().length,wl:wlOps().length,tl:tlOps().length},
     sched:S.sched.map(x=>({id:x.id.slice(-5),date:x.date,time:x.time,end:x.end,title:(x.text||'').slice(0,12),log:x.log?{on:!!x.log.on,si:x.log.si,dept:!!x.log.dept,hours:x.log.hours}:null,
-      missing:x.log&&x.log.on?wlMissing(x):[],mapped:!!(S.wlmap||{})[x.id],synced:!!((S.wlmap||{})[x.id]&&S.wlmap[x.id].h===wlHash(x)),err:(S.wlerr||{})[x.id]||''}))};
+      missing:x.log&&x.log.on?wlMissing(x):[],mapped:!!(S.wlmap||{})[x.id],page:(S.wlmap||{})[x.id]?'https://www.notion.so/'+String(S.wlmap[x.id].p).replace(/-/g,''):'',synced:!!((S.wlmap||{})[x.id]&&S.wlmap[x.id].h===wlHash(x)),err:(S.wlerr||{})[x.id]||''}))};
   copy(JSON.stringify(d,null,1),null,'已複製診斷資訊，貼給 Claude 就好');};
 function syFill(){$('#gcalOn').checked=!!S.gcalOn;$('#syUrl').value=SY.url||'';$('#syPass').value=SY.pass||'';syStatus(syOn()?(syLast||'已設定，等待同步'):'尚未連線');}
 $('#sySave').onclick=()=>{setTimeout(wlLoadOpts,2000);const url=$('#syUrl').value.trim(),pass=$('#syPass').value;if(!/^https:\/\//.test(url)||!pass){toast('請填 https 開頭的 Worker 網址和通關密碼');return}
