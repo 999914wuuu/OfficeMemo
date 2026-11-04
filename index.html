@@ -201,6 +201,7 @@ input[type=time].field{flex:0 0 108px;padding:0 8px}
 .ck{appearance:none;-webkit-appearance:none;flex:0 0 20px;width:20px;height:20px;margin:0;border:1.5px solid color-mix(in srgb,var(--ink) 45%,transparent);border-radius:50%;cursor:pointer;background:transparent}
 .ck:checked{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--page)}
 .pill{border:none;background:var(--soft);color:var(--accent);border-radius:999px;font-size:12px;padding:2px 9px;cursor:pointer;min-height:24px;white-space:nowrap}
+.pill.pri{font-size:14px;font-weight:700;padding:2px 9px;min-width:28px}
 .bolt{border:none;background:transparent;cursor:pointer;font-size:15px;font-weight:600;width:28px;height:28px;border-radius:8px;flex:0 0 28px;color:var(--muted);opacity:.35}
 .lined li.tape{list-style:none;border:none;min-height:0;height:20px;width:58%;margin:12px auto 10px;padding:0;opacity:.8;transform:rotate(-1.2deg);
   background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--accent) 34%,transparent) 0 7px,color-mix(in srgb,var(--accent) 18%,transparent) 7px 14px);
@@ -479,7 +480,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
             <button class="chip" id="doneTog" aria-pressed="false" hidden></button>
             <div class="chips">
               <button class="chip" data-f="all" aria-pressed="true">全部</button>
-              <button class="chip" data-f="quick" aria-pressed="false">↑ 優先</button>
+              <button class="chip" data-f="quick" aria-pressed="false" title="只看優先">↑</button>
             </div>
           </div>
         </div>
@@ -517,7 +518,7 @@ select.field{padding:0 8px;cursor:pointer;color:var(--ink);background-color:var(
       </nav>
     </div>
   </div>
-  <div class="verline">OfficeMemo v2.8</div>
+  <div class="verline">OfficeMemo v2.9</div>
   <div class="stickers" id="stickers"></div>
 </div>
 
@@ -859,7 +860,7 @@ function fmtDay(d,style){const ja=DF()==='ja';
 
 const isMobile=()=>matchMedia('(max-width:860px)').matches;
 let prefersDark=false;try{prefersDark=matchMedia('(prefers-color-scheme: dark)').matches}catch(e){}
-let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlerr:{},wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},dailyOn:true,wMobile:['weather','work','moon'],loc:'taipei',work:{start:'09:00',end:'17:30'},workFix:0,wx:null,cards:{}};
+let S={todos:[],sched:[],memos:[],stickers:[],mine:[],cur:null,curId:null,filter:'all',tab:'todo',stv:0,shotHour:6,nmap:{},gmap:{},gcalOn:false,gcalFrom:'',wlerr:{},wlmap:{},wlOpts:{depts:[],persons:[],kpis:[]},tlogs:[],tlmap:{},tlOpts:{cats:[]},dailyOn:true,wMobile:['weather','work','moon'],loc:'taipei',work:{start:'08:30',end:'17:30'},workFix:0,wx:null,cards:{}};
 try{const raw=localStorage.getItem(KEY);if(raw){const o=JSON.parse(raw);Object.keys(S).forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});}}catch(e){}
 function fixTheme(t){if(!t)return t;if(!t.page&&t.card)t.page=t.card;delete t.card;
   if(t.body&&!t.zh)t.zh=t.body;delete t.body;
@@ -870,6 +871,7 @@ if(!S.cur||!S.cur.page){const p=PRESETS[prefersDark?5:0];S.cur={...p};S.curId=p.
 if(!TABS.includes(S.tab))S.tab='todo';
 S.sched.forEach(s=>{if(!s.date)s.date=dayKey()});
 if(!S.workFix){if(S.work&&S.work.end==='18:00')S.work.end='17:30';S.workFix=1;}
+if(S.workFix<2){if(S.work&&S.work.start==='09:00')S.work.start='08:30';S.workFix=2;}
 S.stickers.forEach(s=>{if(!s.pg)s.pg=(isMobile()?'m:':'d:')+(isMobile()?S.tab:(S.tab==='today'?'todo':S.tab))});
 const curPg=()=>isMobile()?'m:'+S.tab:'d:'+(S.tab==='today'?'todo':S.tab);
 const stickerVisible=s=>{if(s.type==='daily'){if(!S.dailyOn||!s.kind)return false;return isMobile()?(s.id.endsWith('-m')&&S.tab==='today'):s.id.endsWith('-d');}return isMobile()?s.pg==='m:'+S.tab:(s.pg==='d:left'||s.pg===curPg());};
@@ -1243,7 +1245,7 @@ function renderTodos(){if(S.filter==='open')S.filter='all';$$('.pfoot .chips .ch
     ul.append(h('li',{class:'item'+(t.done?' done':'')},
     h('input',{type:'checkbox',class:'ck','aria-label':'完成',checked:t.done,onchange:e=>{t.done=e.target.checked;save();if(t.done)toast('完成了！已收進「已完成」');renderTodos();}}),
     tx,
-    t.pri?h('button',{class:'pill',text:'↑ 優先',title:'取消優先',onclick:()=>{t.pri=false;save();renderTodos();}})
+    t.pri?h('button',{class:'pill pri',text:'↑','aria-label':'取消優先',title:'取消優先',onclick:()=>{t.pri=false;save();renderTodos();}})
       :h('button',{class:'bolt',text:'↑','aria-label':'標成優先',title:'標成優先',onclick:()=>{t.pri=true;save();renderTodos();}}),
     h('button',{class:'x','aria-label':'刪除',text:'×',onclick:()=>{S.todos=S.todos.filter(x=>x!==t);save();renderTodos();}})));});}
 
